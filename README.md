@@ -56,16 +56,16 @@ A raw QFC with no floor is returned with `verdict="UNCALIBRATED"`, deliberately.
 
 ```bash
 pip install -e .          # from a clone
-pytest -m "not slow"      # 33 run in about 25 s with no dataset; 4 more skip
-pytest                    # all 41
+pytest -m "not slow"      # 37 run in about 40 s with no dataset; 4 more skip
+pytest                    # all 45
 ```
 
-41 tests in three groups, and two of the groups **skip rather than pass** when their input is absent, so
+45 tests in three groups, and two of the groups **skip rather than pass** when their input is absent, so
 a skip is a statement that nothing was checked:
 
 | group | count | needs | what it is for |
 |---|---|---|---|
-| default | 33 | nothing | the estimator, the bootstrap, the cap rule, the verdict logic, the column validation, and the numbers this README quotes |
+| default | 37 | nothing | the estimator, the bootstrap, the cap rule, the verdict logic, the column validation, and the numbers this README **and the notebook** quote |
 | `slow` | 4 | the C-Mod release | the scientific regression: rebuild the worked example below and fail if its verdict moves |
 | `integration` | 4 | `DISRUPTIONPY_FRAME=` pointing at a frame exported from DisruptionPy | does this package accept and screen a frame DisruptionPy actually produced |
 
