@@ -120,6 +120,56 @@ def test_readme_worked_example_matches_the_slow_regression_expectations(readme):
         assert value in readme, f"README no longer states {value}"
 
 
+NOTEBOOK = ROOT / "notebooks" / "attribution_stability_on_the_density_limit.ipynb"
+
+
+@pytest.fixture(scope="module")
+def notebook_text() -> str:
+    """Every markdown and code line of the notebook, concatenated."""
+    nb = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+    return "\n".join("".join(c.get("source", [])) for c in nb["cells"])
+
+
+def test_the_notebook_reaches_the_same_verdict_as_the_test_suite(notebook_text):
+    """The notebook is the third place this result is stated, after the README and
+    ``test_regression_cmod.py``, and it is the one a reader opens first.
+
+    It drifted once, and badly: written on 2026-09-15, it still concluded INDISTINGUISHABLE a day after
+    the floor was measured at 30 seeds and the verdict came back COLLAPSE. That is the failure mode this
+    test exists to prevent -- a claim corrected in one file and left standing in a parallel one.
+    """
+    assert "COLLAPSE" in notebook_text
+    assert "INDISTINGUISHABLE**" not in notebook_text, (
+        "the notebook asserts INDISTINGUISHABLE again; the measured verdict is COLLAPSE"
+    )
+    for value in ("0.961", "0.980", "2.69"):
+        assert value in notebook_text, f"the notebook no longer states {value}"
+
+
+def test_the_notebook_keeps_its_own_correction_visible(notebook_text):
+    """The withdrawal is the lesson, so it may not be quietly deleted either. The superseded phrase is
+    allowed to appear exactly once, inside the note that withdraws it."""
+    assert "used to say INDISTINGUISHABLE" in notebook_text
+    assert notebook_text.count("the floor is just as high") == 1, (
+        "the retracted phrase should appear exactly once, as a quotation inside its own withdrawal"
+    )
+
+
+def test_the_notebook_computes_its_floor_at_the_package_default(notebook_text):
+    """A narrative built on a floor computed under a different protocol from the README's is how the
+    two came to disagree in the first place."""
+    assert "n_seeds=30" in notebook_text
+    assert "n_seeds=20" not in notebook_text
+
+
+def test_the_notebook_stores_no_outputs(notebook_text):
+    """Stored outputs are numbers no test can see. The notebook ships with none, so a reader's run is
+    the only source of its figures."""
+    nb = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+    stored = sum(len(c.get("outputs", [])) for c in nb["cells"])
+    assert stored == 0, f"{stored} stored outputs could show superseded numbers"
+
+
 def test_no_superseded_plasma_magnitude_is_quoted(readme):
     """The research project's superseded z values for this condition must never appear here: -8.24 came
     from a head-capped attribution sample and -20.92 from a null carrying two defects at once."""
