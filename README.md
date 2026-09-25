@@ -9,6 +9,21 @@ metric. This package measures it before deployment, without needing labels on th
 It works on DisruptionPy-format frames: one row per `(shot, time)`, a binary label, and a shot
 identifier.
 
+**One thing it will not do for you: choose the label.** The source frame needs a binary column, and a
+disruption-prediction frame generally does not have one — it carries the physics signals and a
+time-to-disruption, from which "positive" is a scientific choice: how many milliseconds before the
+disruption counts as the precursor. That choice changes what the model learns and therefore what its
+attributions mean, so the package refuses to make it silently. Derive it yourself and pass the column:
+
+```python
+source_df["label"] = (source_df["time_until_disrupt"] < 0.050).astype(int)   # your convention, not ours
+screen(source_df, target_df, label_col="label")
+```
+
+If the column is missing the error names the frame, lists its first columns and points at `label_col=`
+and `shot_col=`. Target labels are not needed at all; if they are present they are used only to report an
+AUC alongside the measurement.
+
 ```python
 from disruptionpy_qfc import screen
 
