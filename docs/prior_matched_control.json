@@ -1,0 +1,38 @@
+{
+ "what": "Does the C-Mod era shift's attribution collapse survive matching the label prior of the explained set?",
+ "why": "The worked example in README.md carries a label-prior shift (source 0.5085 positive, target 0.7208) alongside its covariate shift. Until 2026-09-26 the README said QFC does not separate the two. It has now been separated by measurement, so the README states the result instead of the caveat.",
+ "measured_on": "2026-09-25/26",
+ "pre_registration": "PLASMA_LABEL_PRIOR_PREREGISTRATION.md (outcomes P-HOLDS / P-VANISHES / IMMATERIAL / P-UNDERPOWERED fixed before the run)",
+ "runner": "closure_scripts/plasma_prior_matched_qfc.py",
+ "provenance_note": "Run with the research pipeline that produced the paper's own plasma numbers, on the SAME frames this package's demo builds (source 3,363 rows / 40 shots, target 2,504 rows / 38 shots, 48 features), NOT with this package. The two implementations differ slightly on the same data: this package reports QFC 0.9607, the research pipeline 0.9637 on its matched cap rule. The control is a comparison BETWEEN ITS OWN TWO ARMS, so that offset does not enter it.",
+ "design": {
+  "held_fixed": ["the source model (RF 500 trees, depth 20, class_weight=balanced)", "the feature pipeline", "the 500-row attribution cap", "the seeded-random cap rule", "the source arm (GroupKFold-5 out-of-fold TreeSHAP over the source pool)"],
+  "the_one_variable": "the label composition of the 500 explained target rows",
+  "arm_T_control": {"stratified_to": "the target's own prior 0.720847", "composition": [360, 140]},
+  "arm_M_matched": {"stratified_to": "the source's prior 0.508475", "composition": [254, 246]},
+  "why_arm_T_exists": "so that 'stratified rather than unstratified draw' is not a second changed variable; both arms are stratified draws of exactly 500 rows and differ only in composition",
+  "seeds": 10,
+  "pairing": "the same seed drives the source cap and both target draws, so the per-seed difference is paired"
+ },
+ "result": {
+  "arm_T_mean": 0.9605303, "arm_T_sd": 0.0086154, "arm_T_z": -5.4179,
+  "arm_M_mean": 0.9613553, "arm_M_sd": 0.0092952, "arm_M_z": -5.2725,
+  "paired_delta_M_minus_T": 0.000825,
+  "paired_delta_sd_resolution": 0.004958,
+  "null_used": {"mean": 0.9912650, "sd": 0.0056729, "n_seeds": 30, "exact_cut": 2.0790373811},
+  "both_arms_collapse": true,
+  "outcome": "IMMATERIAL",
+  "outcome_meaning": "|paired delta| is SMALLER than the paired across-seed spread, which is the pre-registered strongest form of 'the collapse survives'. The resolution 0.004958 is 5.6x below the pre-registered underpowered threshold of 0.0276 (the gap between the published real value and its null mean), so the design could have seen an effect this size and did not."
+ },
+ "considered_and_not_built": {
+  "idea": "expose the control as an API option, e.g. screen(source_df, target_df, match_prior=True), so a user can run it on their own campaigns",
+  "why_not": "screen() answers one question -- does this model rely on the same features in both environments -- and a prior-matched arm answers a different one, whether an observed collapse is carried by the label composition of the explained sample. Folding the second into the first would make the primary verdict depend on a choice the user did not know they were making. It belongs as a separate diagnostic if a maintainer wants it, not as a flag on the entry point.",
+  "what_a_maintainer_would_need": "the arms are 20 lines: stratify the explained target sample to each prior in turn, hold everything else fixed, pair by seed. closure_scripts/plasma_prior_matched_qfc.py is the reference implementation and is readable as a spec.",
+  "recorded_because": "a design decision that leaves a capability out is worth stating; silently omitting it looks like it was not considered"
+ },
+ "limits": [
+  "Both arms draw STRATIFIED samples, so neither z equals the -4.86 the paper reports for this condition under an unstratified random draw. The comparison that matters is between the arms, which share everything but composition.",
+  "The control changes the composition of the EXPLAINED set, not of the TRAINING set: the forest is fitted on the source pool at 0.5085 throughout, which is what the deploy-once protocol describes. A model retrained under the target's prior is a different question this design does not ask.",
+  "One shift pair exists in this public release, so nothing here generalises to other campaigns or machines."
+ ]
+}
