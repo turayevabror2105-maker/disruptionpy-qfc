@@ -38,4 +38,11 @@ testpaths = ["tests"]
 # ModuleNotFoundError before running a single test, because src/ is not on sys.path and the
 # package is not installed. Verified 2026-09-16: that is exactly what happened.
 pythonpath = ["src"]
-markers = ["slow: requires the C-Mod dataset and minutes of CPU"]
+markers = [
+  "slow: requires the C-Mod dataset and minutes of CPU",
+  # Skipped unless DISRUPTIONPY_FRAME points at a frame exported from DisruptionPy. It is skipped in
+  # the author's environment, where DisruptionPy is not installed, and runs in a maintainer's, who has
+  # the library and machine access -- which is the only place the integration CAN be exercised. A skip
+  # here means nothing was checked, and the skip reason says so rather than reading as a pass.
+  "integration: needs a real DisruptionPy-produced frame via DISRUPTIONPY_FRAME",
+]
