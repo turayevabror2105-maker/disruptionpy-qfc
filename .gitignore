@@ -13,3 +13,5 @@ venv/
 *.h5
 data/
 outputs/
+*.bak
+*.ipynb.bak
