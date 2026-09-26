@@ -34,8 +34,8 @@ opposite way: **COLLAPSE, z = −2.69**. That is not a bug fix, it is the reason
 
 ## Before the first push
 
-* `pytest -m "not slow"` — 33 tests, no dataset needed.
-* `pytest` — 37, the extra four recomputing the worked example from the Open Density Limit Database.
+* `pytest -m "not slow"` — 48 tests, no dataset needed.
+* `pytest` — 56, the extra four recomputing the worked example from the Open Density Limit Database.
 * `.github/workflows/ci.yml` has **never run**, because the repository has had no CI-triggering push. Its
   command is `pytest -m "not slow" -q` on Python 3.10/3.11/3.12 under `ubuntu-latest`, which is what was
   verified locally on 3.10.9; the other two interpreters are untested anywhere.
