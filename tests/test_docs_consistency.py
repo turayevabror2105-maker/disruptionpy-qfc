@@ -278,3 +278,21 @@ def test_the_readme_states_the_prior_control_with_its_limit(readme):
     assert "%d%% of the observed drop" % round(100 * m["fraction_of_observed_drop"]) in readme
     assert "%d%%" % round(100 * m["fraction_at_95pct_steep_end"]) in readme, \
         "the README gives the point estimate without the 95% bound"
+
+
+def test_the_notebook_carries_the_within_null_prior_control_too(notebook_text):
+    """B-386. The notebook stated the control that has a known limit and not the one that reaches past it.
+
+    B-315's defect was a claim corrected everywhere except the most readable artefact in the repo. This is the
+    same coupling in the other direction: the notebook under-claimed while the finding sat in docs/. A pointer
+    would not fix it, so the test requires the numbers, including the bound that makes the claim honest.
+    """
+    if "prior_matched_control.json" not in notebook_text:
+        pytest.skip("the notebook no longer discusses the prior-matched control -- nothing to keep in step")
+    assert "label_prior_within_null_control.json" in notebook_text, (
+        "the notebook gives the explained-rows control without the within-null one, which is the half that "
+        "reaches the training pool's composition")
+    for value in ("0.2943", "0.2849", "18%", "58%"):
+        assert value in notebook_text, f"the notebook no longer states {value}"
+    assert "not resolved" in notebook_text, (
+        "the notebook must say the correlation is unresolved rather than absent")
