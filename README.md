@@ -56,16 +56,16 @@ A raw QFC with no floor is returned with `verdict="UNCALIBRATED"`, deliberately.
 
 ```bash
 pip install -e .          # from a clone
-pytest -m "not slow"      # 44 run in about 80 s with no dataset; 4 more skip
-pytest                    # all 52
+pytest -m "not slow"      # 47 run in about 60 s with no dataset; 4 more skip
+pytest                    # all 55
 ```
 
-52 tests in three groups, and two of the groups **skip rather than pass** when their input is absent, so
+55 tests in three groups, and two of the groups **skip rather than pass** when their input is absent, so
 a skip is a statement that nothing was checked:
 
 | group | count | needs | what it is for |
 |---|---|---|---|
-| default | 44 | nothing | the estimator, the bootstrap, the cap rule, the verdict logic, the column validation, and the numbers this README **and the notebook** quote |
+| default | 47 | nothing | the estimator, the bootstrap, the cap rule, the verdict logic, the column validation, and the numbers this README **and the notebook** quote |
 | `slow` | 4 | the C-Mod release | the scientific regression: rebuild the worked example below and fail if its verdict moves. Its last completed run is recorded in `docs/slow_suite_last_run.json` — the measured floor, QFC, AUC, z and verdict, with the seed counts — because CI cannot run this group and a green badge therefore covers none of the science. Two default tests keep that record and this README in step, and skip rather than pass when no run has been recorded |
 | `integration` | 4 | `DISRUPTIONPY_FRAME=` pointing at a frame exported from DisruptionPy | does this package accept and screen a frame DisruptionPy actually produced |
 
@@ -103,6 +103,8 @@ independent. Draws that come back single-class are skipped, and `summary()` alwa
 the requested draws were usable, with a warning below 80%.
 
 **Seeds.** A null-floor seed is skipped when its half of the pool comes back single-class, or holds fewer distinct shots than folds, or leaves every fold single-class. `NullFloor` records how many seeds were **requested** alongside how many were usable and counts the skips by reason, and both `NullFloor.summary()` and `QFCResult.summary()` print `n/m usable seeds` whenever any were dropped, with the same warning below 80% that the bootstrap line uses. This is not cosmetic: the halves that isolate the rare class are exactly the ones that fail the single-class test, so the surviving splits are the easier ones and a floor built from a fraction of the requested seeds can read optimistically. The exact cut is computed from the seeds actually used, never from the number requested.
+
+**Is the collapse just the label-prior shift?** No, and the floor answers it without a new experiment. The source pool's per-year prevalence runs from 0.1304 (2001, 7 discharges) to 0.7754 (2003, 17 discharges), so each no-shift draw carries its **own** prior gap while the environment is identical by construction — mean 0.1004, max 0.2943, and **two of the thirty draws exceed the real shift's gap of 0.2124**. Those two score **0.9783** and **0.9734** (z = −0.25 and −0.93, both indistinguishable from the floor) where the real comparison scores 0.9607 (z = −2.69): a **wider** prior gap with no environment shift does not reproduce the collapse. Across all thirty draws the relationship between a draw's gap and its QFC is not resolved (Spearman ρ = −0.173, p = 0.361, against a 5% cut of 0.361 at n = 30), and the fitted slope −0.0165 ± 0.0180 puts the prior gap at **18% of the observed drop** at the point estimate and **58% at the steep end of its 95% interval** — so the design excludes the prior gap explaining *all* of the drop, leaving at least 42%, but not it explaining some. Record: `docs/label_prior_within_null_control.json`; pre-registered before it ran. It is one pool and one estimator, and it says nothing about label priors in general.
 
 **Verdict.** `z = (qfc − floor_mean) / floor_sd`, against `t(0.975, n−1)·√(1+1/n)` — the Student-t
 prediction-interval cut for a single new observation, which is what an observed QFC is. Not `|z| > 2`,
