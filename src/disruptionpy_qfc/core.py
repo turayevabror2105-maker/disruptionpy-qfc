@@ -71,6 +71,29 @@ class NullFloor:
     n_seeds: int
     exact_cut: float
     provenance: dict = field(default_factory=dict)
+    # How many seeds were ASKED for, and why any were dropped. Without these, a floor built from 11
+    # usable seeds of 30 is indistinguishable from one built from 11 that were all that was requested.
+    # Skips are not random -- a half that isolates the rare class is the one that fails the
+    # single-class test -- so the surviving draws are the easier splits, and that has to be visible.
+    n_seeds_requested: Optional[int] = None
+    skips: dict = field(default_factory=dict)
+
+    @property
+    def n_seeds_skipped(self) -> int:
+        return sum(self.skips.values())
+
+    def summary(self) -> str:
+        """One line, with the usable-seed count whenever any seed was dropped."""
+        s = "null floor = %+.4f +/- %.4f (%d seeds)   cut = +/-%.3f" % (
+            self.mean, self.sd, self.n_seeds, self.exact_cut)
+        req = self.n_seeds_requested
+        if req and self.n_seeds < req:
+            s += "\n             from %d/%d usable seeds (%s)" % (
+                self.n_seeds, req, ", ".join("%s: %d" % (k, v) for k, v in sorted(self.skips.items())))
+            if self.n_seeds < 0.8 * req:
+                s += "\n             [WARNING: many seeds unusable -- the surviving splits are the "
+                s += "easier ones, so this floor may be optimistic]"
+        return s
 
     def verdict_for(self, qfc: float) -> tuple:
         """Return ``(z, verdict)`` for an observed QFC under this floor."""
@@ -138,9 +161,17 @@ class QFCResult:
                 "own; call compute_null_floor() or use screen()."
             )
         else:
+            seeds = f"{self.n_null_seeds} seeds"
+            req = (self.provenance or {}).get("null_seeds_requested")
+            if req and self.n_null_seeds and self.n_null_seeds < req:
+                # Same rule as the bootstrap line above, not a second one: a floor built from a
+                # fraction of the requested seeds must not read as a floor built from all of them.
+                seeds = f"{self.n_null_seeds}/{req} usable seeds"
+                if self.n_null_seeds < 0.8 * req:
+                    seeds += ", MANY UNUSABLE -- floor may be optimistic"
             lines.append(
                 f"null floor = {self.null_mean:+.4f} +/- {self.null_sd:.4f} "
-                f"({self.n_null_seeds} seeds)   z = {self.z:+.2f}   cut = +/-{self.exact_cut:.3f}"
+                f"({seeds})   z = {self.z:+.2f}   cut = +/-{self.exact_cut:.3f}"
             )
             lines.append(f"verdict    = {self.verdict}")
         if self.threshold_flag is not None:
@@ -463,17 +494,29 @@ def compute_null_floor(
     Xs, ys, gs = _arrays(source_df, feature_cols, label_col, shot_col)
 
     vals = []
+    skips = {}
+
+    def _skip(reason):
+        skips[reason] = skips.get(reason, 0) + 1
+
     for k in range(n_seeds):
         a, b = next(GroupShuffleSplit(n_splits=1, test_size=0.5, random_state=random_state + k).split(Xs, ys, gs))
-        if len(np.unique(ys[a])) < 2 or len(np.unique(gs[a])) < n_splits:
+        # Counted by reason rather than dropped silently: the three reasons are not interchangeable,
+        # and which one dominates tells a maintainer whether the pool is too small or too imbalanced.
+        if len(np.unique(ys[a])) < 2:
+            _skip("single_class_half")
+            continue
+        if len(np.unique(gs[a])) < n_splits:
+            _skip("too_few_shots_to_fold")
             continue
         try:
             vals.append(_qfc_once(Xs[a], ys[a], gs[a], Xs[b], None, model, n_splits, shap_cap, random_state + k)[0])
         except ValueError:
-            continue
+            _skip("all_folds_single_class")
     if len(vals) < 2:
         raise ValueError(
-            f"only {len(vals)} usable null draws from {n_seeds} seeds; the source pool is too small "
+            f"only {len(vals)} usable null draws from {n_seeds} seeds "
+            f"(skipped: {skips or 'none'}); the source pool is too small "
             "or too imbalanced to calibrate against"
         )
     arr = np.asarray(vals, dtype=float)
@@ -483,6 +526,7 @@ def compute_null_floor(
         exact_cut=float(student_t.ppf(0.975, n - 1) * np.sqrt(1 + 1 / n)),
         provenance=_provenance(model, random_state, shap_cap, 0, n_splits)
         | {"construction": "GroupShuffleSplit 50/50 of the source pool, zero real shift"},
+        n_seeds_requested=int(n_seeds), skips=skips,
     )
 
 

@@ -175,3 +175,49 @@ def test_no_superseded_plasma_magnitude_is_quoted(readme):
     from a head-capped attribution sample and -20.92 from a null carrying two defects at once."""
     for bad in ("8.24", "20.92", "8.2384", "20.9"):
         assert bad not in readme, f"README quotes the superseded magnitude {bad}"
+
+
+# --------------------------------------------------------------------- the slow suite's own record (B-377)
+
+
+def _slow_record():
+    import json
+    from pathlib import Path
+
+    p = Path(__file__).resolve().parents[1] / "docs" / "slow_suite_last_run.json"
+    if not p.exists():
+        return None
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def test_the_readme_numbers_match_the_last_slow_run(readme):
+    """The README's worked example must agree with what the slow suite last measured.
+
+    Skipped, never passed, when no slow run has been recorded: CI runs `-m "not slow"` because the tests
+    need a licensed dataset, and a skip here means nothing was checked rather than that all is well.
+    """
+    rec = _slow_record()
+    if rec is None:
+        pytest.skip("no slow run recorded in docs/slow_suite_last_run.json -- run `pytest -m slow` with the "
+                    "C-Mod release present; NOTHING about the worked example has been checked here")
+    m = rec["measured"]
+    assert m["verdict"] == "COLLAPSE", "the recorded run did not collapse: %s" % m["verdict"]
+    assert m["qfc"] < m["floor_mean"], "the recorded QFC is no longer below its own floor"
+    # The README rounds to four and three decimals; compare against the recorded measurement, not a constant.
+    assert "%.3f" % m["qfc"] in readme or "%.4f" % m["qfc"] in readme, \
+        "the README does not carry the QFC the slow suite measured (%.4f)" % m["qfc"]
+    assert "%.3f" % m["floor_mean"] in readme or "%.4f" % m["floor_mean"] in readme, \
+        "the README does not carry the floor the slow suite measured (%.4f)" % m["floor_mean"]
+
+
+def test_the_recorded_slow_run_is_self_consistent():
+    """z must be recomputable from the floor and the QFC the same run recorded, and the verdict from z."""
+    rec = _slow_record()
+    if rec is None:
+        pytest.skip("no slow run recorded -- nothing checked")
+    m = rec["measured"]
+    z = (m["qfc"] - m["floor_mean"]) / m["floor_sd"]
+    assert z == pytest.approx(m["z"], abs=5e-3), "the recorded z does not follow from the recorded floor"
+    expected = "COLLAPSE" if z < -m["exact_cut"] else ("ROBUST" if z > m["exact_cut"] else "INDISTINGUISHABLE")
+    assert m["verdict"] == expected, "the recorded verdict does not follow from the recorded z and cut"
+    assert m["floor_seeds_used"] >= 2

@@ -86,3 +86,36 @@ def test_cmod_era_shift_collapses_against_its_own_floor(frames):
     assert r.qfc == pytest.approx(0.9607, abs=0.01), f"QFC moved: {r.qfc:.4f}"
     assert r.qfc < floor.mean, "the observed value is no longer below its own no-shift floor"
     assert r.verdict == "COLLAPSE", f"got {r.verdict} (z={r.z:.2f}) -- investigate before publishing"
+
+    # Record what was MEASURED, not only that it passed. Written after the assertions, so a failing run
+    # cannot replace a good record with a bad one. CI runs `-m "not slow"` by design -- these tests need a
+    # licensed dataset -- so without this file nothing inside the repository shows the science was ever
+    # exercised, and a green badge covers none of it. The file is a record: no code reads it to decide
+    # anything, and one fast test keeps the README's advertised numbers in step with it.
+    import datetime
+    import json
+
+    from disruptionpy_qfc import __version__ as _ver
+
+    rec = {
+        "what": "the four slow regression tests, run to completion against the real C-Mod release",
+        "when_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "package_version": _ver,
+        "dataset": DATA.name,
+        "measured": {
+            "floor_mean": round(float(floor.mean), 6),
+            "floor_sd": round(float(floor.sd), 6),
+            "floor_seeds_used": int(floor.n_seeds),
+            "floor_seeds_requested": floor.n_seeds_requested,
+            "floor_skips": dict(floor.skips),
+            "exact_cut": round(float(floor.exact_cut), 10),
+            "qfc": round(float(r.qfc), 6),
+            "auc": round(float(r.auc), 6),
+            "z": round(float(r.z), 4),
+            "verdict": r.verdict,
+        },
+        "how_to_reproduce": 'pytest -m slow -q  (needs DL_DataFrame.csv; ~12 min on a 7.7 GB laptop)',
+    }
+    out = Path(__file__).resolve().parents[1] / "docs" / "slow_suite_last_run.json"
+    out.parent.mkdir(exist_ok=True)
+    out.write_text(json.dumps(rec, indent=1) + "\n", encoding="utf-8")
