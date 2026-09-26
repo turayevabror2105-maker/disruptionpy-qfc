@@ -221,3 +221,60 @@ def test_the_recorded_slow_run_is_self_consistent():
     expected = "COLLAPSE" if z < -m["exact_cut"] else ("ROBUST" if z > m["exact_cut"] else "INDISTINGUISHABLE")
     assert m["verdict"] == expected, "the recorded verdict does not follow from the recorded z and cut"
     assert m["floor_seeds_used"] >= 2
+
+
+# --------------------------------------------- the within-null label-prior control (B-385)
+
+
+def _prior_control():
+    import json
+    from pathlib import Path
+
+    p = Path(__file__).resolve().parents[1] / "docs" / "label_prior_within_null_control.json"
+    if not p.exists():
+        return None
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def test_the_prior_control_record_is_self_consistent():
+    """Its headline percentages must follow from its own slope, gap and observed drop."""
+    import numpy as np
+    from scipy import stats
+
+    rec = _prior_control()
+    if rec is None:
+        pytest.skip("no within-null prior control recorded -- nothing checked")
+    m = rec["measured"]
+    frac = (-m["ols_slope"] * m["real_prior_gap"]) / m["observed_drop"]
+    assert frac == pytest.approx(m["fraction_of_observed_drop"], abs=5e-4)
+    tc = float(stats.t.ppf(0.975, m["n_usable"] - 2))
+    steep = m["ols_slope"] - tc * m["ols_slope_se"]
+    frac_hi = (-steep * m["real_prior_gap"]) / m["observed_drop"]
+    assert frac_hi == pytest.approx(m["fraction_at_95pct_steep_end"], abs=5e-4)
+    # the claim that the relationship is unresolved must be judged against the cut, not asserted
+    assert abs(m["spearman_rho"]) < m["spearman_cut_5pct"], "rho now clears the cut -- re-read the conclusion"
+
+
+def test_the_large_gap_draws_really_are_larger_than_the_real_shift():
+    """The non-parametric half of the argument: a WIDER prior gap with no shift stays at the floor."""
+    rec = _prior_control()
+    if rec is None:
+        pytest.skip("no within-null prior control recorded -- nothing checked")
+    m = rec["measured"]
+    big = m["draws_with_gap_above_real"]
+    assert len(big) >= 2, "the argument needs at least two draws above the real gap"
+    for d in big:
+        assert d["prior_gap"] > m["real_prior_gap"], "this draw's gap is not above the real one"
+        assert abs(d["z_vs_floor"]) < m["exact_cut"], "a large-gap draw is NOT indistinguishable from the floor"
+        assert d["qfc"] > m["real_qfc"], "a large-gap no-shift draw scored at or below the real value"
+
+
+def test_the_readme_states_the_prior_control_with_its_limit(readme):
+    """The README must carry both the point estimate and the 95% bound, not just the convenient one."""
+    rec = _prior_control()
+    if rec is None:
+        pytest.skip("no within-null prior control recorded -- nothing checked")
+    m = rec["measured"]
+    assert "%d%% of the observed drop" % round(100 * m["fraction_of_observed_drop"]) in readme
+    assert "%d%%" % round(100 * m["fraction_at_95pct_steep_end"]) in readme, \
+        "the README gives the point estimate without the 95% bound"

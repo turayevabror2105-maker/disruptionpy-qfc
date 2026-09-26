@@ -1,0 +1,43 @@
+{
+ "what": "within-null control: does a no-shift draw's OWN label-prior gap predict its QFC?",
+ "why": "the C-Mod worked example carries a label-prior shift (0.508475 -> 0.720847) as well as a covariate shift, so a reader can attribute the collapse to class balance. Each no-shift draw splits the source pool 50/50 by shot and therefore carries its own prior gap, with the environment identical by construction.",
+ "pre_registered": "both outcomes, four forbidden readings and the resolution were fixed before the run, in Desktop/TASK7_PRIOR_GAP_VS_NULL_QFC_PREREGISTRATION.md",
+ "outcome": "P-FLAT",
+ "measured": {
+  "n_requested": 30,
+  "n_usable": 30,
+  "real_prior_gap": 0.212372,
+  "real_qfc": 0.960703,
+  "floor_mean": 0.98012,
+  "floor_sd": 0.007224,
+  "exact_cut": 2.0790373811,
+  "observed_drop": 0.019417,
+  "prior_gap_mean": 0.100422,
+  "prior_gap_max": 0.294275,
+  "spearman_rho": -0.172859,
+  "spearman_p": 0.361001,
+  "spearman_cut_5pct": 0.361007,
+  "ols_slope": -0.016494,
+  "ols_slope_se": 0.018004,
+  "ols_p": 0.367428,
+  "fraction_of_observed_drop": 0.1804,
+  "fraction_at_95pct_steep_end": 0.5838,
+  "draws_with_gap_above_real": [
+   {
+    "seed": 14,
+    "prior_gap": 0.294275,
+    "qfc": 0.978289,
+    "z_vs_floor": -0.2534
+   },
+   {
+    "seed": 18,
+    "prior_gap": 0.284867,
+    "qfc": 0.973404,
+    "z_vs_floor": -0.9296
+   }
+  ]
+ },
+ "reading": "The non-parametric half assumes nothing: two draws carry prior gaps LARGER than the real shift's and score z = -0.25 and -0.93 against the floor, where the real comparison scores -2.69. The parametric half bounds it: the relationship is not resolved at n = 30, and the fitted slope puts the prior gap at 18% of the observed drop at the point estimate and 58% at the steep end of its 95% interval -- so the design excludes the prior gap explaining ALL of the drop, leaving at least 42%, but not it explaining some.",
+ "limits": "One pool, one estimator, thirty draws. The gaps exist because this source pool mixes a 13% prevalence era with a 78% one; another dataset need not, and nothing here says the label prior is irrelevant to QFC in general.",
+ "how_to_reproduce": "python closure_scripts/task7_prior_gap_vs_null_qfc.py  (~11 min, 230 MB)"
+}
