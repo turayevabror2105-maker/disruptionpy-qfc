@@ -1,6 +1,6 @@
 {
  "what": "the four slow regression tests, run to completion against the real C-Mod release",
- "when_utc": "2026-09-26T06:26:04Z",
+ "when_utc": "2026-09-30T09:06:07Z",
  "package_version": "2.0.0",
  "dataset": "DL_DataFrame.csv",
  "measured": {
