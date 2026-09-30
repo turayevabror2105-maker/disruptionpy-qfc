@@ -34,9 +34,19 @@ opposite way: **COLLAPSE, z = −2.69**. That is not a bug fix, it is the reason
 
 ## Before the first push
 
-* `pytest -m "not slow"` — 48 tests, no dataset needed.
-* `pytest` — 56, the extra four recomputing the worked example from the Open Density Limit Database.
+* `pytest -m "not slow"` — 53 tests, no dataset needed.
+* `pytest` — 61, the extra four recomputing the worked example from the Open Density Limit Database.
 * `.github/workflows/ci.yml` has **never run**, because the repository has had no CI-triggering push. Its
-  command is `pytest -m "not slow" -q` on Python 3.10/3.11/3.12 under `ubuntu-latest`, which is what was
-  verified locally on 3.10.9; the other two interpreters are untested anywhere.
+  command is `pytest -m "not slow" -q` on Python 3.10/3.11/3.12 under `ubuntu-latest`. Two of the three are
+  verified locally: **3.10.9**, and **3.12.10** on 2026-09-26 — 48 passed, 4 skipped (the `integration`
+  group, which needs DisruptionPy), 0 failed, 58 s — with **pandas 3.0.6, shap 0.52.0 and
+  scikit-learn 1.5.1**, a newer major pandas and shap than the 3.10 environment carries, so the declared
+  dependency ranges are exercised forward as well. **3.11.9 is now verified too**, on 2026-09-29 —
+  48 passed, 4 skipped, 0 failed in 37.8 s — in a throwaway virtual environment with **numpy 2.4.6,
+  pandas 3.0.6, scikit-learn 1.9.1, scipy 1.17.1 and shap 0.51.0**, a markedly newer stack than either
+  of the other two, so the declared dependency ranges are exercised well forward of their floors. All three interpreter runs above predate the five tests added on 2026-09-30 — the reproducible stand-in frame and the module that imports the `integration` group's assertion bodies and runs them against it — so their 48 is the default-group count as of those dates, not a figure that disagrees with the 53 above. So all
+  three interpreters in the CI matrix have now been run locally, and the only thing `ci.yml` itself adds
+  is `ubuntu-latest` rather than Windows. Nothing was installed into the 3.10 environment, which the
+  author's campaigns and audit daemon run under; each check used its own virtual environment and the
+  environments were discarded afterwards.
 * The wheel in `dist/` is gitignored and is not part of the history.

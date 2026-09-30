@@ -56,16 +56,16 @@ A raw QFC with no floor is returned with `verdict="UNCALIBRATED"`, deliberately.
 
 ```bash
 pip install -e .          # from a clone
-pytest -m "not slow"      # 48 run in about 60 s with no dataset; 4 more skip
-pytest                    # all 56
+pytest -m "not slow"      # 53 run in about 4 min with no dataset; 4 more skip
+pytest                    # all 61
 ```
 
-56 tests in three groups, and two of the groups **skip rather than pass** when their input is absent, so
+61 tests in three groups, and two of the groups **skip rather than pass** when their input is absent, so
 a skip is a statement that nothing was checked:
 
 | group | count | needs | what it is for |
 |---|---|---|---|
-| default | 48 | nothing | the estimator, the bootstrap, the cap rule, the verdict logic, the column validation, and the numbers this README **and the notebook** quote |
+| default | 53 | nothing | the estimator, the bootstrap, the cap rule, the verdict logic, the column validation, and the numbers this README **and the notebook** quote. Five of these run the `integration` group's own assertion bodies -- imported, not copied, so there is one definition of each -- against a stand-in frame built reproducibly from the public Open Density Limit Database by `tests/fixtures/build_standin_frame.py`. They do not stand in for the integration group, which still skips; they make the claim that those assertions have been exercised at all into something you can re-run, and one further test fails if the fixture itself goes vacuous |
 | `slow` | 4 | the C-Mod release | the scientific regression: rebuild the worked example below and fail if its verdict moves. Its last completed run is recorded in `docs/slow_suite_last_run.json` — the measured floor, QFC, AUC, z and verdict, with the seed counts — because CI cannot run this group and a green badge therefore covers none of the science. Two default tests keep that record and this README in step, and skip rather than pass when no run has been recorded |
 | `integration` | 4 | `DISRUPTIONPY_FRAME=` pointing at a frame exported from DisruptionPy | does this package accept and screen a frame DisruptionPy actually produced |
 
