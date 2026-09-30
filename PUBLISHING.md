@@ -36,7 +36,7 @@ opposite way: **COLLAPSE, z = −2.69**. That is not a bug fix, it is the reason
 
 * `pytest -m "not slow"` — 53 tests, no dataset needed.
 * `pytest` — 61, the extra four recomputing the worked example from the Open Density Limit Database.
-* `.github/workflows/ci.yml` has **never run**, because the repository has had no CI-triggering push. Its
+* `.github/workflows/ci.yml` **ran for the first time on 2026-09-30** and passed — workflow “tests”, success in 2m 22s on `main` — triggered by the push that published the packaged version. Before that it had never run, because the repository had had no CI-triggering push. Its
   command is `pytest -m "not slow" -q` on Python 3.10/3.11/3.12 under `ubuntu-latest`. Two of the three are
   verified locally: **3.10.9**, and **3.12.10** on 2026-09-26 — 48 passed, 4 skipped (the `integration`
   group, which needs DisruptionPy), 0 failed, 58 s — with **pandas 3.0.6, shap 0.52.0 and
