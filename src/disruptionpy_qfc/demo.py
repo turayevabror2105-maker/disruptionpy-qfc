@@ -25,9 +25,9 @@ from .features import build_rolling_features
 SIGNALS = ["density", "elongation", "minor_radius", "plasma_current", "toroidal_B_field", "triangularity"]
 SOURCE_YEARS = (2000, 2001, 2003)
 TARGET_YEARS = (2005, 2009)
-# 2014-2016 discharges carry no density-limit precursor labels in the public release: a curation gap,
-# so they are excluded rather than silently treated as all-negative.
-EXCLUDED_YEARS_NOTE = "2014-2016 excluded: zero positive labels in the public release"
+# The public release labels every 2014-2016 time point stable (density_limit_phase 0 throughout), so those
+# campaigns give a model nothing positive to learn or to be scored on, and they are left out.
+EXCLUDED_YEARS_NOTE = "2014-2016 excluded: labelled stable throughout in the public release"
 
 
 def load_cmod(csv_path: str | Path) -> pd.DataFrame:
