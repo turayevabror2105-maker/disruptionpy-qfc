@@ -1,4 +1,4 @@
-"""The null floor must say how many of the requested seeds it actually used. (B-375)
+"""The null floor must say how many of the requested seeds it actually used.
 
 `QFCResult.summary()` has always reported `n_bootstrap_used/n_bootstrap_attempted` and warned below 80%,
 with the reason written into the code: a CI from a handful of usable draws must not read as a CI from all
@@ -47,7 +47,7 @@ def test_a_pool_that_must_skip_says_so_and_names_the_reason():
     assert f.n_seeds < 12, "this pool was engineered so seeds must be dropped"
     assert f.n_seeds_skipped == f.n_seeds_requested - f.n_seeds
     assert sum(f.skips.values()) == f.n_seeds_skipped
-    assert set(f.skips) <= {"single_class_half", "too_few_shots_to_fold", "all_folds_single_class"}
+    assert set(f.skips) <= {"single_class_half", "too_few_shots_to_fold", "all_folds_single_class", "constant_importance"}
     assert "%d/%d usable seeds" % (f.n_seeds, 12) in f.summary()
 
 

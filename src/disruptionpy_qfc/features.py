@@ -3,6 +3,11 @@
 Every statistic at time *i* is computed from the ``window`` points strictly *before* *i*, within the
 same shot. Nothing looks ahead, which is the only construction usable by a warning system that must
 decide in real time.
+
+The window is a number of samples, not a length of time: if the sampling rate differs between campaigns, the
+same window covers a different span, so resample to a common time base first. On a window whose values are
+almost constant the skew (and the lag-1 autocorrelation) is a ratio of tiny numbers and carries mostly
+rounding noise; such a feature is still a valid model input, but its importance should be read with that in mind.
 """
 
 from __future__ import annotations
