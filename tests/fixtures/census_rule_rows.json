@@ -1,0 +1,59 @@
+{
+ "rule": "a ROBUST row whose no-shift floor mean lies below its permuted-label chance floor is read INDISTINGUISHABLE",
+ "sources": {
+  "census_a_final_123.json": "886ad0422c24257e40ac7a3743b5cbcf72e4609880575e14afbb346bb9ca608a",
+  "census_a_rebuilt.json": "5f01478a50ad35e20f7b8da2930ba4cb1f0a15ff83f9759624fcf06595894dee"
+ },
+ "census_tallies": {
+  "standard_robust": 6,
+  "adjudicated_robust": 0,
+  "changed_by_this_rule": 4,
+  "changed_by_the_other_rule": 2
+ },
+ "rows": [
+  {
+   "row": "ecg/annotation_ptbxl_0_to_1/lr",
+   "real": 0.9435,
+   "null_mean": 0.828421,
+   "null_sd": 0.053795,
+   "n_null": 30,
+   "census_z": 2.1392,
+   "standard": "ROBUST",
+   "chance_floor": 0.8676398559423769,
+   "census_adjudicated": "INDISTINGUISHABLE"
+  },
+  {
+   "row": "ecg/icentia_temporal_seg0_to_seg2/lr",
+   "real": 0.8425174153254865,
+   "null_mean": 0.40030503446545446,
+   "null_sd": 0.11028347216179298,
+   "n_null": 30,
+   "census_z": 4.009779273282926,
+   "standard": "ROBUST",
+   "chance_floor": 0.8091710954357676,
+   "census_adjudicated": "INDISTINGUISHABLE"
+  },
+  {
+   "row": "radiation/isotope_population/lr",
+   "real": 0.45481378115782856,
+   "null_mean": 0.15555779051145907,
+   "null_sd": 0.06189022143348095,
+   "n_null": 30,
+   "census_z": 4.835270963895438,
+   "standard": "ROBUST",
+   "chance_floor": 0.5239388919601977,
+   "census_adjudicated": "INDISTINGUISHABLE"
+  },
+  {
+   "row": "radiation/radai_to_radiacode_detector/lr",
+   "real": 0.2819819194767254,
+   "null_mean": 0.1569168915808597,
+   "null_sd": 0.04128062671680125,
+   "n_null": 30,
+   "census_z": 3.0296300672432412,
+   "standard": "ROBUST",
+   "chance_floor": 0.3364797,
+   "census_adjudicated": "INDISTINGUISHABLE"
+  }
+ ]
+}
