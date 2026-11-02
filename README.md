@@ -14,7 +14,7 @@ against that paper's reference implementation number for number.
 ## Quick start
 
 ```bash
-pip install git+https://github.com/turayevabror2105-maker/disruptionpy-qfc@v3.0.0
+pip install git+https://github.com/turayevabror2105-maker/disruptionpy-qfc@v3.0.1
 ```
 
 ```python
@@ -172,7 +172,7 @@ Data: the public Open Density Limit Database (Maris, Rea, Trevisan and the Alcat
 CC BY; `github.com/MIT-PSFC/open_density_limit_database`). Six signals, each turned into eight statistics over the
 10 preceding time points of its shot (48 features). The source is 3,363 rows from 40 discharges, positive rate
 0.508; the target is 2,504 rows from 38 discharges, positive rate 0.721. Discharges from 2014–2016 are left out
-because the public release gives them no density-limit labels.
+because the public release has them labelled stable throughout (no time point in a density-limit phase).
 
 | quantity | value |
 |---|---|

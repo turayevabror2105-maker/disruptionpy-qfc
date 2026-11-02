@@ -55,7 +55,7 @@ marks a question the package does not answer by itself because it concerns the s
 | P11 | Licence and citation | `LICENSE` (MIT), `CITATION.cff` |
 | P12 | A broken attribution or input is reported as skipped draws | Only `DegenerateDrawError` (single-class folds, a constant vector) is skipped; anything else is raised, through `screen` too. `test_a_callable_returning_the_wrong_shape_is_refused` |
 | P13 | Ten fold orders cost ten times as much for nothing | Orders with identical folds reuse one vector, and the deployed model is fitted once. `test_fold_orders_with_identical_folds_are_computed_once` |
-| P14 | Long shots dominate the importance vector | README "What this does not do" states it, with the remedies (a common time base, a weighting callable) |
+| P14 | Long shots dominate the importance vector | README "What this does not do" states it, with the remedy: resample the frames to a common time base before screening |
 | P15 | KernelSHAP settings are hidden or move with shap's version | Stated in the README and pinned (`l1_reg`); numpy's global random state is restored. `test_kernelshap_leaves_numpy_global_random_state_alone`, `test_kernelshap_on_a_non_tree_model_is_reproducible_for_a_seed` |
 | P16 | An unlabelled or partly labelled target is refused | Missing target labels are allowed and left out of the AUC. `test_a_partly_labelled_target_is_accepted_and_its_auc_uses_the_labelled_rows` |
 | P17 | The result is not machine-readable, or hides the null | `to_dict()` is strict JSON and carries both floors in full. `test_to_dict_is_strict_json_even_with_undefined_values`, `test_the_result_carries_both_floors_and_the_summary_shows_the_resolution` |

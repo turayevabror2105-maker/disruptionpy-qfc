@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.1 (2026-11-03)
+
+Wording only; no number or behaviour changed. The README and the demo said the 2014-2016 C-Mod discharges
+have no density-limit labels; the public release labels them stable throughout, which is why they are left out.
+`docs/ATTACKS.md` row P14 named a row-weighting attribution callable as a remedy that the README does not give;
+the remedy it gives, resampling to a common time base, is the one now cited. `docs/worked_example.json` was
+regenerated under 3.0.1 and its numbers are unchanged.
+
 ## 3.0.0 (2026-11-02)
 
 The statistic, cut and scoring rules are now the paper's, the null is built as the paper's reference implementation builds it, and the package is tested against that implementation
