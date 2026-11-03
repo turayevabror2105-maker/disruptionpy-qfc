@@ -117,13 +117,40 @@ def test_the_paper_construction_and_depth_numbers():
     assert "%d of their 48 feature columns are bit-identical" % s["n_columns_bit_identical"] in README
     diffs = s["unmatched_max_abs_diff_same_position"]
     assert len(diffs) == 48 - s["n_columns_bit_identical"] and all(k.endswith("_skew") for k in diffs)
-    assert "the other %s, the skews, differ by at most 4.4e-16" % {6: "six"}[len(diffs)] in README
+    assert "the other %s, the skews, differ by at most 4.5e-16" % {6: "six"}[len(diffs)] in README
     assert max(diffs.values()) <= 4.5e-16
     assert REC["default"]["result"]["provenance"]["imputed_with_source_median"]["source"] == {"toroidal_B_field_skew": 18}
     assert "the same 18 source rows imputed with the same median" in README
     _has("%.4f, z", d20["result"]["qfc"], "the depth-20 QFC")
     _has("−%.2f, COLLAPSE", -d20["result"]["z"], "the depth-20 z")
     assert d20["result"]["verdict"] == "COLLAPSE"
+
+
+def test_every_number_in_the_objections_table_is_the_records():
+    """docs/ATTACKS.md quotes numbers from the worked example too; each must be the record's, and a number that is
+    neither the record's nor one of the table's fixed constants (Python versions, the nominal 2.5% and 5% rates, the
+    skew tolerance) fails, so a stale figure cannot survive a regeneration."""
+    import re
+
+    import numpy as np
+    from scipy import stats
+
+    table = (ROOT / "docs" / "ATTACKS.md").read_text(encoding="utf-8")
+    d, m, g = REC["default"]["result"], REC["prior_matched"], REC["prior_gap"]
+    pooled = REC["split_sensitivity"]["pooled_60"]
+    diff = np.asarray(m["arm_M"]["per_seed"]) - np.asarray(m["arm_T"]["per_seed"])
+    t = diff.mean() / (diff.std(ddof=1) / np.sqrt(diff.size))
+    from_record = {"%.4f" % d["resolution"], "%.3f" % d["auc"], "%.3f" % (abs(pooled["z"]) - pooled["cut"]),
+                   "%.2f" % (2 * stats.t.sf(abs(t), diff.size - 1))}
+    constants = {"2.5", "3.10", "3.12", "4.5e-16"}
+    found = set(re.findall(r"\d+\.\d+(?:e-\d+)?", table))
+    assert from_record <= found, f"ATTACKS.md lacks the record's {sorted(from_record - found)}"
+    assert found <= from_record | constants, f"ATTACKS.md quotes numbers not in the record: {sorted(found - from_record - constants)}"
+    pct = set(re.findall(r"\d+%", table))
+    assert pct == {"5%", "%d%%" % round(100 * diff.mean() / g["observed_drop"])}, pct
+    s = REC["paper_null"]["frames_vs_paper"]
+    assert set(re.findall(r"\d+ of \d+", table)) == {"%d of 48" % s["n_columns_bit_identical"]}
+    assert max(s["unmatched_max_abs_diff_same_position"].values()) <= 4.5e-16
 
 
 def test_every_test_the_objections_table_cites_exists():

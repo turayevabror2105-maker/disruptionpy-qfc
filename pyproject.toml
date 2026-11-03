@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "disruptionpy-qfc"
-version = "3.0.2"
+version = "3.0.3"
 description = "Attribution-stability screening (QFC) for DisruptionPy-format fusion shot data, with the verdict procedure of the paper that defines it"
 readme = "README.md"
 requires-python = ">=3.10"

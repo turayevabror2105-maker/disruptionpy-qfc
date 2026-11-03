@@ -6,7 +6,7 @@ authors:
   - family-names: Turayev
     given-names: Abror
     orcid: "https://orcid.org/0009-0000-3182-2830"
-version: 3.0.2
+version: 3.0.3
 date-released: 2026-11-03
 license: MIT
 repository-code: "https://github.com/turayevabror2105-maker/disruptionpy-qfc"
