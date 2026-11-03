@@ -8,7 +8,7 @@ what you measure any different from a no-shift split of the source alone?
     print(result.summary())
 """
 
-__version__ = "3.0.1"
+__version__ = "3.0.2"
 
 from .core import (  # noqa: F401
     ATTRIBUTIONS,

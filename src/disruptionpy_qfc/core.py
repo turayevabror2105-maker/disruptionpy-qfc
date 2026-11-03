@@ -440,6 +440,11 @@ class QFCResult:
                      "or single-class)")
         lines.append(f"n          = {self.n_source} rows / {self.n_shots_source} shots  ->  "
                      f"{self.n_target} rows / {self.n_shots_target} shots   (attribution: {self.attribution})")
+        imp = (self.provenance or {}).get("imputed_with_source_median") or {}
+        n_s, n_t = sum((imp.get("source") or {}).values()), sum((imp.get("target") or {}).values())
+        if n_s or n_t:
+            lines.append(f"imputed    = {n_s} source and {n_t} target feature values were missing or undefined and "
+                         f"were replaced by the source median of their column (see provenance)")
         if self.verdict == "UNCALIBRATED":
             lines.append("verdict    = UNCALIBRATED -- no null floor supplied. A raw QFC cannot be read on its own; "
                          "use screen(), or pass null_floor=compute_null_floor(...).")
@@ -540,14 +545,35 @@ def _features(source_df, target_df, feature_cols, label_col, shot_col):
         bad = [c for c in feature_cols if not pd.api.types.is_numeric_dtype(df[c])]
         if bad:
             raise ValueError(f"{name} has non-numeric feature columns: {bad[:8]}")
-        if not np.all(np.isfinite(df[feature_cols].to_numpy(dtype=float))):
-            raise ValueError(f"{name} has NaN or infinite feature values; impute or drop them first")
+        if np.isinf(df[feature_cols].to_numpy(dtype=float)).any():
+            raise ValueError(f"{name} has infinite feature values; replace or drop them first")
     return feature_cols
 
 
-def _arrays(df: pd.DataFrame, feature_cols: Sequence[str], label_col: str, shot_col: str):
-    return (df[list(feature_cols)].to_numpy(dtype=float), df[label_col].to_numpy().astype(int),
-            df[shot_col].to_numpy())
+def _source_medians(source_df: pd.DataFrame, feature_cols: Sequence[str]) -> np.ndarray:
+    """The source frame's median of each feature column, over its non-missing values."""
+    med = source_df[list(feature_cols)].median()
+    empty = [c for c in feature_cols if pd.isna(med[c])]
+    if empty:
+        raise ValueError(f"source_df has feature columns with no values at all: {empty[:8]}; drop them")
+    return med.to_numpy(dtype=float)
+
+
+def _matrix(df: pd.DataFrame, feature_cols: Sequence[str], medians: np.ndarray) -> tuple:
+    """Feature matrix with every missing value replaced by the SOURCE frame's median of its column (an
+    undefined window statistic, such as the skew of a window with no measurable spread, or a missing value).
+    Returns ``(X, {column: number replaced})``."""
+    X = df[list(feature_cols)].to_numpy(dtype=float)
+    miss = np.isnan(X)
+    if miss.any():
+        X = np.where(miss, medians[None, :], X)
+    return X, {c: int(n) for c, n in zip(feature_cols, miss.sum(axis=0)) if n}
+
+
+def _arrays(df: pd.DataFrame, feature_cols: Sequence[str], label_col: str, shot_col: str, medians=None):
+    """``(X, y, groups)`` of a source frame, missing feature values replaced by its own column medians."""
+    medians = _source_medians(df, feature_cols) if medians is None else medians
+    return _matrix(df, feature_cols, medians)[0], df[label_col].to_numpy().astype(int), df[shot_col].to_numpy()
 
 
 def _model(model, random_state):
@@ -646,9 +672,11 @@ def compute_qfc(
     if n_fold_orders < 1:
         raise ValueError("n_fold_orders must be at least 1")
 
-    Xs, ys, gs = _arrays(source_df, feature_cols, label_col, shot_col)
+    med = _source_medians(source_df, feature_cols)
+    Xs, imp_s = _matrix(source_df, feature_cols, med)
+    ys, gs = source_df[label_col].to_numpy().astype(int), source_df[shot_col].to_numpy()
     _check_settings(shap_cap, n_splits, gs)
-    Xt = target_df[feature_cols].to_numpy(dtype=float)
+    Xt, imp_t = _matrix(target_df, feature_cols, med)
     gt = target_df[shot_col].to_numpy()
     if len(np.unique(ys)) < 2:
         raise ValueError("source_df is single-class; nothing to learn")
@@ -706,7 +734,8 @@ def compute_qfc(
         provenance=_provenance(model, random_state, shap_cap, n_splits, attr_name, n_fold_orders=n_fold_orders,
                                n_distinct_fold_orders=len(cache), n_bootstrap=n_bootstrap,
                                bootstrap_rule="shot-level with multiplicity, fold order 0",
-                               folds_skipped_single_class=skipped),
+                               folds_skipped_single_class=skipped,
+                               imputed_with_source_median={"source": imp_s, "target": imp_t}),
     )
     if null_floor is not None:
         _score(r, null_floor, chance_floor)
@@ -773,7 +802,9 @@ def compute_null_floor(
     feature_cols = _features(source_df, None, feature_cols, label_col, shot_col)
     model = _model(model, random_state)
     attr, attr_name = _resolve_attribution(attribution, model)
-    Xs, ys, gs = _arrays(source_df, feature_cols, label_col, shot_col)
+    med = _source_medians(source_df, feature_cols)
+    Xs, imp_s = _matrix(source_df, feature_cols, med)
+    ys, gs = source_df[label_col].to_numpy().astype(int), source_df[shot_col].to_numpy()
     _check_settings(shap_cap, n_splits, gs)
 
     vals, skips, splits, folds_skipped = [], {}, set(), 0
@@ -816,7 +847,8 @@ def compute_null_floor(
         provenance=_provenance(model, random_state, shap_cap, n_splits, attr_name,
                                construction="GroupShuffleSplit 50/50 of the source pool by shot; the measurement's "
                                             "procedure between the halves at fold order 0; zero shift",
-                               folds_skipped_single_class=folds_skipped),
+                               folds_skipped_single_class=folds_skipped,
+                               imputed_with_source_median={"source": imp_s}),
         n_seeds_requested=int(n_seeds), skips=skips,
     )
 
@@ -846,9 +878,10 @@ def compute_chance_floor(
     feature_cols = _features(source_df, target_df, feature_cols, label_col, shot_col)
     model = _model(model, 0)
     attr, attr_name = _resolve_attribution(attribution, model)
-    Xs, ys, gs = _arrays(source_df, feature_cols, label_col, shot_col)
+    med = _source_medians(source_df, feature_cols)
+    Xs, ys, gs = _arrays(source_df, feature_cols, label_col, shot_col, med)
     _check_settings(shap_cap, n_splits, gs)
-    Xt = target_df[feature_cols].to_numpy(dtype=float)
+    Xt = _matrix(target_df, feature_cols, med)[0]
     vals, skips = [], {}
     for d in range(n_draws):
         yp = np.random.default_rng(d).permutation(ys)

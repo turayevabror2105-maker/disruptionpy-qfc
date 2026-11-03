@@ -259,6 +259,27 @@ def test_rolling_features_no_warning_on_constant_signal():
     assert (out["sig_skew"] == 0).all() and (out["sig_std"] == 0).all()
 
 
+def test_skew_is_undefined_exactly_where_the_spread_is_at_floating_point_resolution():
+    """The paper's builder calls scipy.stats.skew, which returns NaN on such windows; so does this one, by the
+    same rule fixed in code (second central moment <= (eps * mean)**2). Elsewhere the value is scipy's own."""
+    from scipy import stats
+    from disruptionpy_qfc.features import _skew, _window_stats
+
+    v = np.full(10, 3.0)
+    v[3] = np.nextafter(3.0, 4.0)                      # one ULP of spread
+    assert np.isnan(_skew(v)) and np.isnan(_window_stats(v)[7])
+    rng = np.random.default_rng(0)
+    for _ in range(200):
+        w = rng.normal(size=10) * rng.uniform(1e-6, 10) + rng.uniform(-5, 5)
+        assert _skew(w) == float(stats.skew(w))
+        assert _window_stats(w)[4] == float(np.polyfit(np.arange(10), w, 1)[0])
+    assert _window_stats(np.ones(10))[7] == 0.0        # no spread at all: 0, as in the paper
+    df = pd.DataFrame({"shot": [1] * 20, "time": range(20), "label": [0, 1] * 10,
+                       "sig": np.r_[np.full(12, 3.0) + np.r_[0, 0, 0, np.nextafter(3.0, 4.0) - 3.0, [0] * 8],
+                                    np.arange(8.0)]})
+    out = build_rolling_features(df, ["sig"], window=5)
+    assert out["sig_skew"].isna().any() and out["sig_mean"].notna().all()
+
 def test_constant_null_with_float_residue_is_undefined():
     """Thirty identical draws can leave sd ~1e-16 (the mean is not exact); that is no spread, not a tiny one."""
     from disruptionpy_qfc.core import NullFloor
@@ -294,11 +315,20 @@ def test_retired_fixed_threshold_is_gone():
     assert not any("threshold" in k for k in compute_qfc(src, tgt, **FAST).to_dict())
 
 
-def test_missing_values_are_refused_not_propagated():
+def test_missing_feature_values_take_the_source_median_and_labels_are_refused():
     src, tgt = make_frame(seed=44), make_frame(seed=45)
-    src.loc[3, "f2"] = np.nan
-    with pytest.raises(ValueError, match="NaN"):
-        compute_qfc(src, tgt, **FAST)
+    src.loc[3, "f2"], src.loc[7, "f2"], tgt.loc[5, "f3"] = np.nan, np.nan, np.nan
+    r = compute_qfc(src, tgt, **FAST)
+    assert r.provenance["imputed_with_source_median"] == {"source": {"f2": 2}, "target": {"f3": 1}}
+    assert "imputed    = 2 source and 1 target" in r.summary()
+    filled_s, filled_t = src.copy(), tgt.copy()
+    filled_s["f2"] = filled_s["f2"].fillna(src["f2"].median())
+    filled_t["f3"] = filled_t["f3"].fillna(src["f3"].median())        # the SOURCE median, for the target too
+    assert compute_qfc(filled_s, filled_t, **FAST).qfc == r.qfc
+    floor = compute_null_floor(src, n_seeds=4, model=fast_model(), shap_cap=100, n_splits=3)
+    assert floor.provenance["imputed_with_source_median"] == {"source": {"f2": 2}}
+    with pytest.raises(ValueError, match="infinite"):
+        compute_qfc(src.assign(f1=np.inf), tgt, **FAST)
     src, tgt = make_frame(seed=44), make_frame(seed=45)
     src["label"] = src["label"].astype(float)
     src.loc[4, "label"] = np.nan

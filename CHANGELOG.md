@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.0.2 (2026-11-03)
+
+The worked example's features now match the paper's (42 of 48 columns bit-identical, the six skews within 4.4e-16). `build_rolling_features` returned the skew of a window whose
+spread is at floating-point resolution as a ratio of rounding errors (on the C-Mod toroidal field it differed from the paper's value by up to 1.0); it now
+returns NaN there, by the rule under which `scipy.stats.skew`, which the paper's builder calls, returns NaN (second
+central moment at or below `(eps * mean)**2`), and the skew value elsewhere is scipy's own. The slope is now computed
+for every window, as in the paper. `screen`, `compute_qfc`, `compute_null_floor` and `compute_chance_floor` replace a
+missing or undefined feature value with the source frame's median of its column, for source and target, as the
+paper did, and report the count per column (`provenance["imputed_with_source_median"]`, `summary()`); they used to
+refuse it. On C-Mod 18 source values are imputed, the same rows and the same median as the paper's, and 42 of the 48
+columns are now bit-identical to the paper's arrays (the six skews within 4.4e-16), so the paper's own null
+construction rebuilt on these frames gives the paper's floor, 0.9913 ± 0.0057. The worked example moves from
+QFC 0.9626, floor 0.9801 ± 0.0072, z = -2.43 to QFC 0.9607, floor 0.9805 ± 0.0069, z = -2.87, still COLLAPSE.
+The TCV L-mode to H-mode case is unchanged (its features have no undefined values).
+
 ## 3.0.1 (2026-11-03)
 
 Wording only; no number or behaviour changed. The README and the demo said the 2014-2016 C-Mod discharges
