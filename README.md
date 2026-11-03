@@ -14,7 +14,7 @@ against that paper's reference implementation number for number.
 ## Quick start
 
 ```bash
-pip install git+https://github.com/turayevabror2105-maker/disruptionpy-qfc@v3.0.2
+pip install git+https://github.com/turayevabror2105-maker/disruptionpy-qfc@v3.0.3
 ```
 
 ```python
@@ -208,13 +208,14 @@ arms collapse (z = −3.08 and −2.83). The difference is 9% of the observed dr
 it is not significant (t = 1.86 on 9 degrees of freedom, p = 0.10), so matching the prior may remove a
 small part of the drop, but not most of it.
 
-**Why the paper reports a higher floor for this comparison.** The paper's census scores this row at 0.9637
-against a floor of 0.9913 ± 0.0057, z = −4.86 (its census receipt, not yet published). The difference is the null's
+**Why the paper reports a higher floor for this comparison.** The paper's census scores this row at 0.9637, a
+mean over five model seeds at one fold order (the package's figures use one model seed, 42, and average ten fold
+orders), against a floor of 0.9913 ± 0.0057, z = −4.86 (its census receipt, not yet published). The difference is the null's
 construction, not the data or the tree depth. For this row the paper's floor fits one forest on the first half and
 compares its attributions on the very rows it was trained on with those on the second half; this package builds
 every null draw out of fold, as the paper's reference implementation does. The package's frames have the paper's
 rows, labels and shots, and the same 18 source rows imputed with the same median; 42 of their 48 feature columns
-are bit-identical to the paper's arrays and the other six, the skews, differ by at most 4.4e-16. On these frames
+are bit-identical to the paper's arrays and the other six, the skews, differ by at most 4.5e-16. On these frames
 the paper's construction gives 0.9913 ± 0.0057, the paper's own floor, and the single-order real value at depth
 20 and seed 42 is 0.9608, the paper's own value for that seed. Tree depth does not matter here:
 the paper's row used a depth of 20, and at depth 20 the package's floor is identical to every digit (trees fitted
