@@ -14,7 +14,7 @@ against that paper's reference implementation number for number.
 ## Quick start
 
 ```bash
-pip install git+https://github.com/turayevabror2105-maker/disruptionpy-qfc@v3.0.1
+pip install git+https://github.com/turayevabror2105-maker/disruptionpy-qfc@v3.0.2
 ```
 
 ```python
@@ -43,8 +43,12 @@ df = df.drop(columns=["time_until_disrupt"]).dropna(axis=1, how="all").dropna()
 
 That last `dropna()` removes every row with any missing signal, which can remove whole shots, and not at random
 (a diagnostic that was off, a shot that ended early); check how many shots survive, or impute instead. The
-package refuses a frame with a missing feature value, a non-binary source label, a non-numeric feature or fewer
-than three features, and the error says which. Missing target labels are allowed; they are left out of the AUC.
+package refuses a non-binary or missing source label, a non-numeric or infinite feature, or fewer than three
+features, and the error says which. A missing feature value that is left, or a window statistic that is undefined
+(the skew of a window whose spread is at floating-point resolution, which `build_rolling_features` returns as NaN),
+is replaced by the source frame's median of its column, for source and target alike, as the paper does; the
+count per column is in `result.provenance["imputed_with_source_median"]` and in `summary()`. Missing target labels
+are allowed; they are left out of the AUC.
 
 ## What the words mean
 
@@ -177,31 +181,31 @@ because the public release has them labelled stable throughout (no time point in
 | quantity | value |
 |---|---|
 | target AUC | 0.939 |
-| QFC (mean of 10 fold orders) | 0.9626 (orders range 0.9586 to 0.9672) |
-| null floor | 0.9801 ± 0.0072, 30 draws |
-| z, against the cut of 2.079 | −2.43 |
-| resolution | 0.0150 |
-| verdict | **COLLAPSE** (9 of the 10 fold orders collapse on their own) |
+| QFC (mean of 10 fold orders) | 0.9607 (orders range 0.9572 to 0.9644) |
+| null floor | 0.9805 ± 0.0069, 30 draws |
+| z, against the cut of 2.079 | −2.87 |
+| resolution | 0.0143 |
+| verdict | **COLLAPSE** (10 of the 10 fold orders collapse on their own) |
 
-**A borderline collapse.** The model still predicts well, and an attribution agreement of 0.963 looks excellent,
-yet two halves of the source campaigns alone agree with each other at 0.980. At the default seeds that is a
-collapse, but it is close to the line, because the floor depends on which 30 splits of the 40 source shots it
-draws. Drawing 30 other splits (seeds 0–29) gives a floor of 0.9821 ± 0.0108, z = −1.81, INDISTINGUISHABLE;
-pooling all 60 draws gives 0.9811 ± 0.0091, z = −2.03 against that count's cut of 2.018, COLLAPSE by a margin of
-0.008. Forty shots is a small pool, and one split (seed 8, 0.935) sits far below the rest. Read this as evidence
-that the explanation moved, at the edge of what this pool can resolve, not as a settled collapse.
+**A collapse near the line.** The model still predicts well, and an attribution agreement of 0.961 looks
+excellent, yet two halves of the source campaigns alone agree with each other at 0.980. At the default seeds that
+is a collapse, but the floor depends on which 30 splits of the 40 source shots it draws. Drawing 30 other splits
+(seeds 0–29) gives a floor of 0.9820 ± 0.0115, z = −1.86, INDISTINGUISHABLE; pooling all 60 draws gives
+0.9813 ± 0.0094, z = −2.18 against that count's cut of 2.018, COLLAPSE by a margin of 0.164. Forty shots is a
+small pool, and one split (seed 8, 0.930) sits far below the rest. Read this as evidence that the explanation
+moved, near the edge of what this pool can resolve, not as a settled collapse.
 
 **Is it just the label-prior shift?** The positive rate moves from 0.508 to 0.721, so a reader can ask whether the
 difference is class balance. Two controls, each with outcomes fixed before it was first run, say the prior does not
 explain it. *Inside the null:* each split carries its own prior gap, and two of the 30 draws have a gap larger than
-the real one (0.294 and 0.285 against 0.212), yet they score 0.978 and 0.973, z = −0.25 and −0.93. Across the 30
-draws the gap does not predict QFC (Spearman ρ = −0.173, p = 0.361); the fitted slope attributes 20% of the
-observed drop to the prior gap at its point estimate and 65% at the steep end of its 95% interval, so the gap
+the real one (0.294 and 0.285 against 0.212), yet they score 0.979 and 0.973, z = −0.25 and −1.12. Across the 30
+draws the gap does not predict QFC (Spearman ρ = −0.119, p = 0.530); the fitted slope attributes 16% of the
+observed drop to the prior gap at its point estimate and 54% at the steep end of its 95% interval, so the gap
 cannot explain all of it. *In the explained rows:* explaining 500 target rows drawn at the target's prior (360
 positive, 140 negative) and at the source's (254, 246), everything else fixed, over 10 paired seeds, gives
-0.9601 ± 0.0090 and 0.9614 ± 0.0088, a paired difference of +0.0013 against its paired spread of 0.0020; both
-arms collapse (z = −2.77 and −2.59). The difference is 7% of the observed drop; tested against its standard error
-it is not quite significant (t = 2.06 on 9 degrees of freedom, p = 0.07), so matching the prior may remove a
+0.9593 ± 0.0094 and 0.9610 ± 0.0089, a paired difference of +0.0017 against its paired spread of 0.0029; both
+arms collapse (z = −3.08 and −2.83). The difference is 9% of the observed drop; tested against its standard error
+it is not significant (t = 1.86 on 9 degrees of freedom, p = 0.10), so matching the prior may remove a
 small part of the drop, but not most of it.
 
 **Why the paper reports a higher floor for this comparison.** The paper's census scores this row at 0.9637
@@ -209,11 +213,12 @@ against a floor of 0.9913 ± 0.0057, z = −4.86 (its census receipt, not yet pu
 construction, not the data or the tree depth. For this row the paper's floor fits one forest on the first half and
 compares its attributions on the very rows it was trained on with those on the second half; this package builds
 every null draw out of fold, as the paper's reference implementation does. The package's frames have the paper's
-rows, labels and shots; 41 of their 48 feature columns are bit-identical to the paper's arrays, six differ by at
-most 1.4e-15, and the toroidal-field skew differs by up to 1.0 on nearly constant windows. On these frames the
-paper's construction gives 0.9912 ± 0.0060, against the paper's 0.9913 ± 0.0057. Tree depth does not matter here:
+rows, labels and shots, and the same 18 source rows imputed with the same median; 42 of their 48 feature columns
+are bit-identical to the paper's arrays and the other six, the skews, differ by at most 4.4e-16. On these frames
+the paper's construction gives 0.9913 ± 0.0057, the paper's own floor, and the single-order real value at depth
+20 and seed 42 is 0.9608, the paper's own value for that seed. Tree depth does not matter here:
 the paper's row used a depth of 20, and at depth 20 the package's floor is identical to every digit (trees fitted
-on half the source do not grow past depth 20) and its QFC 0.9613, z = −2.61, COLLAPSE. The paper's own
+on half the source do not grow past depth 20) and its QFC 0.9604, z = −2.91, COLLAPSE. The paper's own
 construction-matched rescoring of this row, a secondary column of its census, finds 0.9825 ± 0.0113 and
 INDISTINGUISHABLE, in line with the split sensitivity above.
 

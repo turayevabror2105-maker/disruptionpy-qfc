@@ -106,14 +106,21 @@ def test_the_label_prior_controls():
 def test_the_paper_construction_and_depth_numbers():
     p, d20 = REC["paper_null"], REC["depth20"]
     _has("gives %.4f ± ", p["mean"], "the rebuilt paper construction mean")
-    _has("± %.4f, against", p["sd"], "the rebuilt paper construction sd")
+    _has("± %.4f, the paper's own floor", p["sd"], "the rebuilt paper construction sd")
+    # the paper's census receipt stores this row's floor rounded to six places: 0.991265 +- 0.005673
+    assert (round(p["mean"], 6), round(p["sd"], 6)) == (0.991265, 0.005673)
+    _has("seed 42 is %.4f, the paper's own value", p["real_depth20_seed42_order0"], "the seed-42 real")
+    assert round(p["real_depth20_seed42_order0"], 7) == 0.960812      # the paper's seed-42 cap-matched value
     assert d20["null_floor"]["mean"] == REC["default"]["null_floor"]["mean"]
     s = p["frames_vs_paper"]
     assert s["labels_equal"] and s["shot_partition_equal"] and s["shape_equal"]
     assert "%d of their 48 feature columns are bit-identical" % s["n_columns_bit_identical"] in README
-    diffs = sorted(s["unmatched_max_abs_diff_same_position"].values())
-    assert len(diffs) == 48 - s["n_columns_bit_identical"] == 7 and max(diffs[:-1]) <= 1.4e-15
-    _has("by up to %.1f on nearly constant windows", diffs[-1], "the toroidal-field skew difference")
+    diffs = s["unmatched_max_abs_diff_same_position"]
+    assert len(diffs) == 48 - s["n_columns_bit_identical"] and all(k.endswith("_skew") for k in diffs)
+    assert "the other %s, the skews, differ by at most 4.4e-16" % {6: "six"}[len(diffs)] in README
+    assert max(diffs.values()) <= 4.5e-16
+    assert REC["default"]["result"]["provenance"]["imputed_with_source_median"]["source"] == {"toroidal_B_field_skew": 18}
+    assert "the same 18 source rows imputed with the same median" in README
     _has("%.4f, z", d20["result"]["qfc"], "the depth-20 QFC")
     _has("−%.2f, COLLAPSE", -d20["result"]["z"], "the depth-20 z")
     assert d20["result"]["verdict"] == "COLLAPSE"
@@ -136,6 +143,9 @@ def test_every_test_the_objections_table_cites_exists():
 
 
 def test_the_readme_quotes_no_version_2_number():
-    """Version 2's worked example (QFC 0.9607, z = -2.69) came from a different procedure; it must not reappear."""
-    for stale in ("0.9607", "2.69", "0.961,", "0.391", "threshold_flag"):
-        assert stale not in README, f"README still carries the version 2 figure {stale}"
+    """Version 2's worked example (QFC 0.9607, floor 0.9801 +- 0.0072, z = -2.69) and version 3.0.0's (QFC 0.9626,
+    z = -2.43) came from other procedures or features; they must not reappear. Version 3.0.2's QFC happens to round
+    to 0.9607 as well, so that figure is allowed only as the record's own value."""
+    for stale in ("2.69", "0.0072", "0.9626", "2.43", "0.391", "threshold_flag"):
+        assert stale not in README, f"README still carries the superseded figure {stale}"
+    assert "%.4f" % REC["default"]["result"]["qfc"] == "0.9607"

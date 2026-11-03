@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 import disruptionpy_qfc as dq  # noqa: E402
-from disruptionpy_qfc.core import _arrays, _real_arm, _treeshap, _explain  # noqa: E402
+from disruptionpy_qfc.core import _arrays, _explain, _matrix, _real_arm, _source_medians, _treeshap  # noqa: E402
 from disruptionpy_qfc.demo import build_demo_frames  # noqa: E402
 
 PARTS = ("default", "depth20", "paper_null", "prior_gap", "prior_matched", "floor_seed0")
@@ -90,7 +90,7 @@ def part_paper_null(source, target):
     d = np.asarray(draws)
     # the paper's real value at seed 42 on its cap-matched random rule: one fold order, depth 20, the same
     # cap rule as the package (verify_shap_cap_headvsrandom.py, mode 'random')
-    Xt = target[cols].to_numpy(float)
+    Xt = _matrix(target, cols, _source_medians(source, cols))[0]
     s42 = dq.qfc_statistic(*_real_arm(X, y, g, Xt, dq.default_model(42, max_depth=20), 5, 500, 42, _treeshap)[:2])
     return {"construction": "single forest on half 1, in-sample half 1 vs out-of-sample half 2 (the paper's census "
                             "null for this row)", "draws": draws, "mean": float(d.mean()), "sd": float(d.std(ddof=1)),
@@ -164,7 +164,7 @@ def target_prior(p):
 def part_prior_matched(source, target, default_part):
     cols = dq.detect_feature_cols(source)
     X, y, g = _arrays(source, cols, "label", "shot")
-    Xt, yt = target[cols].to_numpy(float), target["label"].to_numpy().astype(int)
+    Xt, yt = _matrix(target, cols, _source_medians(source, cols))[0], target["label"].to_numpy().astype(int)
     p_src, p_tgt = float(y.mean()), float(yt.mean())
 
     def strat(rng, rate):
