@@ -5,17 +5,45 @@
 A model trained on one set of discharges can keep a high AUC on a later campaign while the features it leans on
 change underneath. Accuracy metrics cannot see that. This package measures it before deployment, without labels on
 the new data, and tells you whether what it measured is more than the change you would see with no shift at all.
+The measurement is QFC (Quantitative Feature Consistency): the rank correlation between the feature importances a
+model shows on the data it was trained on and on the data it is deployed on.
 
-It works on DisruptionPy-format frames: one row per `(shot, time)`, a shot column and, on the training data, a
-binary label. The measurement and its verdict rules are those of the paper that defines them (Turayev, *Pareto
-impossibility of attribution consistency under deployment shift*, in preparation), and the tests check the package
-against that paper's reference implementation number for number.
+This is independent work by one researcher, not affiliated with, reviewed or endorsed by MIT PSFC or the
+DisruptionPy maintainers; the name only says which data format it reads. DisruptionPy, the Open Density Limit
+Database and the DPRF predictor, on which it builds, are credited under [Credits](#credits-citation-licence).
 
-## Quick start
+## On the Open Density Limit Database
+
+On the public Open Density Limit Database (Maris, Rea, Trevisan and the Alcator C-Mod Team, MIT PSFC, 2025), a
+random forest trained on the Alcator C-Mod campaigns of 2000, 2001 and 2003 and deployed on 2005 and 2009 keeps a
+target AUC of 0.939. Its feature ranking on the later campaigns agrees with its ranking on the training campaigns at
+QFC = 0.9607, while two random halves of the training campaigns agree with each other at 0.9805 on average over 30
+splits. That is z = −2.87 against a cut of 2.079: the ranking moved more than no shift explains, and the verdict is
+COLLAPSE. It is close to the line. Thirty other splits of the same 40 training discharges give INDISTINGUISHABLE
+(z = −1.86), and all sixty together give COLLAPSE (z = −2.18).
+
+What moved: summed over each signal's eight window statistics, density's share of the attribution rises from 32.1%
+to 41.3% and plasma current's falls from 39.5% to 31.3%, so density overtakes plasma current. Among single features
+the largest is still plasma current's minimum. This describes the one measurement; the package builds no no-shift
+floor for a single signal's share, so it is not itself a test.
+
+The details, two controls for the change in class balance, and the reason the paper's figures for this comparison
+differ are in the [worked example](#worked-example-alcator-c-mod-the-2000-2001-and-2003-campaigns-to-2005-and-2009).
+
+## Run the C-Mod example in three commands
 
 ```bash
-pip install git+https://github.com/turayevabror2105-maker/disruptionpy-qfc@v3.0.3
+pip install "git+https://github.com/turayevabror2105-maker/disruptionpy-qfc@v3.0.3"
+curl -LO https://raw.githubusercontent.com/MIT-PSFC/open_density_limit_database/613257131aabfbcb301dacc429a8b3c0cfa9f858/data/DL_DataFrame.csv
+python -m disruptionpy_qfc.demo --data DL_DataFrame.csv --out cmod_result.json
 ```
+
+The second command fetches the public release at a fixed commit (24,605,618 bytes, SHA-256
+`c296028985f880cfa341030af0b54d7fe7092b639156281dba454b0926385318`); from it the demo builds frames with the record's
+row, discharge and label counts. The demo prints the frame sizes and the result's `summary()`, and `--out` writes the
+full result as JSON. The recorded run took 536 seconds on a 32-core machine; it takes longer on fewer cores.
+
+## Your own frames
 
 ```python
 from disruptionpy_qfc import screen
@@ -50,17 +78,20 @@ is replaced by the source frame's median of its column, for source and target al
 count per column is in `result.provenance["imputed_with_source_median"]` and in `summary()`. Missing target labels
 are allowed; they are left out of the AUC.
 
+`result.summary()` prints the QFC, the floor, z, the cut, the resolution and the verdict with its meaning;
+`result.to_dict()` gives the whole result as strict JSON.
+
 ## What the words mean
 
 | term | meaning |
 |---|---|
 | **attribution** | how much each feature contributed to one prediction. By default TreeSHAP for tree models and KernelSHAP for others |
 | **importance vector** | the mean absolute attribution of each feature over the explained rows (every row counts once, so long shots count for more) |
-| **QFC** | Spearman's rank correlation between the source and target importance vectors: 1 means the features keep the same order of importance, lower means the order changed |
+| **QFC** | Quantitative Feature Consistency: Spearman's rank correlation between the source and target importance vectors. 1 means the features keep the same order of importance; lower means the order changed |
 | **fold order** | the source vector is built out of fold (no shot is explained by a model that trained on it). Which equal-sized shots share a fold is arbitrary, so the reported QFC is the mean over 10 such orders |
 | **null floor** | the same measurement between two random halves of the source, 30 times. There is no shift between two halves, so this is what QFC looks like when nothing changed |
 | **z** | how many null-floor standard deviations the observed QFC lies from the floor's mean |
-| **cut** | 2.079 for 30 null draws, the exact two-sided 5% cut for one new value against 30 (wider than the familiar 2 because 30 draws is a small sample) |
+| **cut** | 2.079 for 30 null draws, the exact two-sided 5% cut for one new value against 30 (wider than the normal-theory 1.96 because 30 draws is a small sample) |
 | **resolution** | cut × floor sd: the smallest change in QFC this floor can detect |
 | **chance floor** | the same measurement with the source labels shuffled, 15 times: what a model trained on noise gives |
 
@@ -155,11 +186,11 @@ not a model you have already fitted, because the out-of-fold vector and the null
 
 **Cost.** One `screen` fits the deployed model once, 5 fold models for each distinct fold order and 6 models for
 each of the 30 null draws: at most 1 + 50 + 180 = 231 fits, plus the attributions. A chance floor, when built,
-adds 6 fits for each of its 15 draws, and a bootstrap 6 per draw. On the C-Mod example below (3,363 source rows, 48 features) it took
-about 10 minutes on a 32-core machine. Fitting time grows with the number of rows; attribution time does not,
-because at most 500 rows are explained per vector. KernelSHAP is far slower than TreeSHAP: about 6,000 model
-evaluations per explained row. Fewer trees, a smaller `shap_cap` or `n_fold_orders=1` make it faster; the
-defaults are the paper's.
+adds 6 fits for each of its 15 draws, and a bootstrap 6 per draw. On the C-Mod example below (3,363 source rows,
+48 features) it took 536 seconds, about nine minutes, on a 32-core machine. Fitting time grows with the number of
+rows; attribution time does not, because at most 500 rows are explained per vector. KernelSHAP is far slower than
+TreeSHAP: about 6,000 model evaluations per explained row. Fewer trees, a smaller `shap_cap` or `n_fold_orders=1`
+make it faster; the defaults are the paper's.
 
 **Determinism.** TreeSHAP and Saabas results are identical on rerun with the same seed on the same machine;
 KernelSHAP is seeded too. Between machines, `GroupKFold`'s ordering of equal-sized shots follows numpy's sort,
@@ -195,6 +226,16 @@ is a collapse, but the floor depends on which 30 splits of the 40 source shots i
 small pool, and one split (seed 8, 0.930) sits far below the rest. Read this as evidence that the explanation
 moved, near the edge of what this pool can resolve, not as a settled collapse.
 
+**Which signals moved.** The record stores the source and target importance vectors of fold order 0, whose rank
+correlation is that order's QFC. Summed over each signal's eight statistics, density's share of the total
+attribution rises from 32.1% to 41.3% and plasma current's falls from 39.5% to 31.3%, so at the level of signals
+density overtakes plasma current. Among single features the largest is still plasma current's minimum, now
+followed by density's maximum and mean. The shares describe this one measurement: the package builds no no-shift
+floor for a single signal's share, so how much of the movement no-shift sampling alone would produce is not
+measured here. Density and plasma current are the two quantities of the Greenwald density limit,
+n_G = I_p/(πa²) (Greenwald, *Plasma Phys. Control. Fusion* 44, R27, 2002); whether the movement reflects the
+physics of the later campaigns or their mix of discharges is a question this measurement cannot answer.
+
 **Is it just the label-prior shift?** The positive rate moves from 0.508 to 0.721, so a reader can ask whether the
 difference is class balance. Two controls, each with outcomes fixed before it was first run, say the prior does not
 explain it. *Inside the null:* each split carries its own prior gap, and two of the 30 draws have a gap larger than
@@ -208,20 +249,22 @@ arms collapse (z = −3.08 and −2.83). The difference is 9% of the observed dr
 it is not significant (t = 1.86 on 9 degrees of freedom, p = 0.10), so matching the prior may remove a
 small part of the drop, but not most of it.
 
-**Why the paper reports a higher floor for this comparison.** The paper's census scores this row at 0.9637, a
-mean over five model seeds at one fold order (the package's figures use one model seed, 42, and average ten fold
-orders), against a floor of 0.9913 ± 0.0057, z = −4.86 (its census receipt, not yet published). The difference is the null's
-construction, not the data or the tree depth. For this row the paper's floor fits one forest on the first half and
-compares its attributions on the very rows it was trained on with those on the second half; this package builds
-every null draw out of fold, as the paper's reference implementation does. The package's frames have the paper's
-rows, labels and shots, and the same 18 source rows imputed with the same median; 42 of their 48 feature columns
-are bit-identical to the paper's arrays and the other six, the skews, differ by at most 4.5e-16. On these frames
-the paper's construction gives 0.9913 ± 0.0057, the paper's own floor, and the single-order real value at depth
-20 and seed 42 is 0.9608, the paper's own value for that seed. Tree depth does not matter here:
-the paper's row used a depth of 20, and at depth 20 the package's floor is identical to every digit (trees fitted
-on half the source do not grow past depth 20) and its QFC 0.9604, z = −2.91, COLLAPSE. The paper's own
-construction-matched rescoring of this row, a secondary column of its census, finds 0.9825 ± 0.0113 and
-INDISTINGUISHABLE, in line with the split sensitivity above.
+**Why the paper reports a higher floor for this comparison.** Two of this paragraph's figures are the paper's
+and are quoted from its census, which is not yet published: the real value 0.9637 and its z = −4.86. The package did not compute them, and they are not in
+`docs/worked_example.json`. The paper's census scores this row at 0.9637, a mean over five model seeds at one fold
+order (the package's figures use one model seed, 42, and average ten fold orders), against a floor of
+0.9913 ± 0.0057, z = −4.86. The difference is the null's construction, not the data or the tree depth. For this
+row the paper's floor fits one forest on the first half and compares its attributions on the very rows it was
+trained on with those on the second half; this package builds every null draw out of fold, as the paper's
+reference implementation does. The package's frames have the paper's rows, labels and shots, and the same 18
+source rows imputed with the same median; 42 of their 48 feature columns are bit-identical to the paper's arrays
+and the other six, the skews, differ by at most 4.5e-16. On these frames the paper's construction gives
+0.9913 ± 0.0057, the paper's own floor, and the single-order real value at depth 20 and seed 42 is 0.9608, the
+paper's own value for that seed; the package computed both, and both are in the record. Tree depth does not matter
+here: the paper's row used a depth of 20, and at depth 20 the package's floor is identical to every digit (trees
+fitted on half the source do not grow past depth 20) and its QFC 0.9604, z = −2.91, COLLAPSE. The paper's own
+construction-matched rescoring of this row, a secondary column of its census, reads it as INDISTINGUISHABLE,
+in line with the split sensitivity above.
 
 Every number the package computed in this section is in `docs/worked_example.json`, written by
 `scripts/regenerate_worked_example.py` with the machine, library versions and a hash of the package code it
@@ -273,7 +316,23 @@ strongest objections to the measurement and to this package, each with the test 
   gradient boosting Explanation Shift detects 38 and 37 against QFC's 29 and 31. What QFC adds is a verdict
   calibrated against the model's own no-shift floor, computable without target labels.
 
-## Changes, citation, licence
+## Credits, citation, licence
 
-`CHANGELOG.md` lists what changed between versions. To cite: `CITATION.cff`, and the dataset you screened. MIT
-licence.
+This package reads data in the format of DisruptionPy, and its integration tests run on frames DisruptionPy builds:
+
+- G. L. Trevisan, Y. Wei, A. M. Decker, J. Lorincz, S. L. Jackson, C. Rea, R. S. Granetz and the MIT PSFC
+  Disruptions Group, *DisruptionPy: An open-source physics-based scientific framework for disruption analysis of
+  fusion plasmas*, Journal of Open Source Software 11(119), 9364 (2026), doi:10.21105/joss.09364;
+  `github.com/MIT-PSFC/disruption-py`.
+
+The worked example uses, and this repository does not redistribute:
+
+- A. D. Maris, C. Rea, G. L. Trevisan and the Alcator C-Mod Team, *The Open Density Limit Database*, MIT Plasma
+  Science and Fusion Center (2025), `github.com/MIT-PSFC/open_density_limit_database`; data CC BY, code MIT.
+
+The `"saabas"` option follows the feature contributions of the DPRF predictor (C. Rea et al., *Nucl. Fusion* 59,
+096016, 2019). The question this package asks comes from cross-machine work such as K. J. Montes et al.,
+*Machine learning for disruption warnings on Alcator C-Mod, DIII-D, and EAST*, *Nucl. Fusion* 59, 096015 (2019).
+
+`CHANGELOG.md` lists what changed between versions. To cite this package: `CITATION.cff`, together with the dataset
+you screened. MIT licence.

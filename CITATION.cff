@@ -1,6 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below, and cite the dataset you screened."
 title: "disruptionpy-qfc: attribution-stability screening for DisruptionPy-format shot data"
+abstract: "Independent software, not affiliated with MIT PSFC or the DisruptionPy maintainers. It measures whether a model trained on one set of discharges relies on the same features on another (QFC, Quantitative Feature Consistency) and scores the change against the model's own no-shift floor, without labels on the new data."
 type: software
 authors:
   - family-names: Turayev
@@ -17,3 +18,43 @@ keywords:
   - interpretability
   - SHAP
   - distribution shift
+references:
+  - type: article
+    title: "DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"
+    authors:
+      - family-names: Trevisan
+        given-names: Gregorio L.
+      - family-names: Wei
+        given-names: Yumou
+      - family-names: Decker
+        given-names: Amos M.
+      - family-names: Lorincz
+        given-names: Joshua
+      - family-names: Jackson
+        given-names: Samuel L.
+      - family-names: Rea
+        given-names: Cristina
+      - family-names: Granetz
+        given-names: Robert S.
+      - name: "MIT PSFC Disruptions Group"
+    journal: "Journal of Open Source Software"
+    volume: 11
+    issue: 119
+    start: 9364
+    year: 2026
+    doi: 10.21105/joss.09364
+  - type: data
+    title: "The Open Density Limit Database"
+    authors:
+      - family-names: Maris
+        given-names: Andrew D.
+      - family-names: Rea
+        given-names: Cristina
+      - family-names: Trevisan
+        given-names: Gregorio L.
+      - name: "the Alcator C-Mod Team"
+    institution:
+      name: "MIT Plasma Science and Fusion Center"
+    year: 2025
+    url: "https://github.com/MIT-PSFC/open_density_limit_database"
+    notes: "Data CC BY, code MIT. Used by the worked example; not redistributed here."

@@ -37,7 +37,7 @@ marks a question the package does not answer by itself because it concerns the s
 | F3 | The candidates were too weak | Paper |
 | G1 | This number cannot be regenerated | Every number the package computed for the README is in `docs/worked_example.json`, written by `scripts/regenerate_worked_example.py`; `test_docs_consistency.py` pins the README to it; `test_regression_cmod.py` recomputes it. The paper's figures are quoted with the receipt named |
 | G2 | The code does not do what the paper says | `test_reference_identity.py`: exact equality with the paper's reference code (random forests with TreeSHAP; the other attribution methods have no reference counterpart and are tested in `test_attributions.py`) |
-| G3 | Too expensive | README "Cost": at most 231 fits without a chance floor; about 10 minutes for the worked example on 32 cores |
+| G3 | Too expensive | README "Cost": at most 231 fits without a chance floor; 536 seconds, about nine minutes, for the worked example on 32 cores |
 | G4 | Results move between runs | README "Determinism"; `test_reproducible`, `test_each_tree_method_runs_and_is_reproducible`, `test_kernelshap_on_a_non_tree_model_is_reproducible_for_a_seed` |
 | H1 | Prior art | README names Explanation Shift, Kendall's tau and sliced Wasserstein; the paper cites the rest |
 | H2 | How should a practitioner use it | README "Quick start", "The verdicts", "Options" |

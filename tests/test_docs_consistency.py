@@ -176,3 +176,31 @@ def test_the_readme_quotes_no_version_2_number():
     for stale in ("2.69", "0.0072", "0.9626", "2.43", "0.391", "threshold_flag"):
         assert stale not in README, f"README still carries the superseded figure {stale}"
     assert "%.4f" % REC["default"]["result"]["qfc"] == "0.9607"
+
+
+def test_the_signal_shares_the_readme_states():
+    """The README's signal-level reading (density overtakes plasma current) is computed from the record's own
+    fold-order-0 vectors. This pins each share it quotes, the order it claims, and the single largest feature."""
+    from scipy.stats import spearmanr
+
+    r = REC["default"]["result"]
+    f, s, t = r["feature_cols_used"], r["source_importance"], r["target_importance"]
+    assert spearmanr(s, t).correlation == pytest.approx(r["qfc_per_order"][0], abs=1e-12)   # they are order 0's
+
+    def share(v, signal):
+        return sum(x for c, x in zip(f, v) if c.startswith(signal + "_")) / sum(v)
+
+    for signal in ("density", "plasma_current"):
+        assert sum(c.startswith(signal + "_") for c in f) == 8
+    d_s, d_t = share(s, "density"), share(t, "density")
+    p_s, p_t = share(s, "plasma_current"), share(t, "plasma_current")
+    assert p_s > d_s and d_t > p_t
+    assert "density's share of the total attribution rises from %.1f%% to %.1f%%" % (100 * d_s, 100 * d_t) in README
+    assert "plasma current's falls from %.1f%% to %.1f%%" % (100 * p_s, 100 * p_t) in README
+    top = sorted(zip(t, f), reverse=True)
+    assert [c for _, c in top[:3]] == ["plasma_current_min", "density_max", "density_mean"]
+    assert "the largest is still plasma current's minimum, now followed by density's maximum and mean" in README
+
+
+def test_the_runtime_the_readme_states_is_the_records():
+    assert "took %d seconds" % round(REC["default"]["seconds"]) in README
