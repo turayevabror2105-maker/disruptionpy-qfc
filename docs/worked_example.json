@@ -1,7 +1,7 @@
 {
  "what": "every number the README states about the C-Mod worked example, from one regeneration",
  "generator": "scripts/regenerate_worked_example.py",
- "package_version": "3.0.3",
+ "package_version": "3.0.4",
  "dataset": "The Open Density Limit Database (Maris, Rea, Trevisan & the Alcator C-Mod Team, MIT PSFC, 2025), DL_DataFrame.csv",
  "default": {
   "part": "default",
@@ -14,10 +14,10 @@
    "scipy": "1.15.3",
    "scikit-learn": "1.7.2",
    "shap": "0.49.1",
-   "package": "3.0.3",
-   "src_sha256": "bda246cdff2095d96640e05956954f99bfa7af13ee9b410016752fa5bf530035"
+   "package": "3.0.4",
+   "src_sha256": "c60ed3f6ec36d46e4d2095027c6b063b702f8e517310d5002cd75777c222426f"
   },
-  "started": "2026-11-03 11:11:19",
+  "started": "2026-11-13 17:58:29",
   "frames": {
    "source_rows": 3363,
    "source_shots": 40,
@@ -271,14 +271,14 @@
     "cut_effective": 2.0790373811037823,
     "provenance": {
      "package": "disruptionpy-qfc",
-     "version": "3.0.3",
+     "version": "3.0.4",
      "estimator": "RandomForestClassifier(class_weight='balanced', n_estimators=500, n_jobs=-1,\n                       random_state=42)",
      "random_state": 42,
      "attribution": "treeshap",
      "shap_cap": 500,
      "cap_rule": "seeded random subsample without replacement",
      "n_splits": 5,
-     "generated": "2026-11-03 11:16:44",
+     "generated": "2026-11-13 18:03:51",
      "construction": "GroupShuffleSplit 50/50 of the source pool by shot; the measurement's procedure between the halves at fold order 0; zero shift",
      "folds_skipped_single_class": 0,
      "imputed_with_source_median": {
@@ -293,14 +293,14 @@
    "chance_floor": null,
    "provenance": {
     "package": "disruptionpy-qfc",
-    "version": "3.0.3",
+    "version": "3.0.4",
     "estimator": "RandomForestClassifier(class_weight='balanced', n_estimators=500, n_jobs=-1,\n                       random_state=42)",
     "random_state": 42,
     "attribution": "treeshap",
     "shap_cap": 500,
     "cap_rule": "seeded random subsample without replacement",
     "n_splits": 5,
-    "generated": "2026-11-03 11:20:15",
+    "generated": "2026-11-13 18:07:20",
     "n_fold_orders": 10,
     "n_distinct_fold_orders": 10,
     "n_bootstrap": 0,
@@ -356,14 +356,14 @@
    "cut_effective": 2.0790373811037823,
    "provenance": {
     "package": "disruptionpy-qfc",
-    "version": "3.0.3",
+    "version": "3.0.4",
     "estimator": "RandomForestClassifier(class_weight='balanced', n_estimators=500, n_jobs=-1,\n                       random_state=42)",
     "random_state": 42,
     "attribution": "treeshap",
     "shap_cap": 500,
     "cap_rule": "seeded random subsample without replacement",
     "n_splits": 5,
-    "generated": "2026-11-03 11:16:44",
+    "generated": "2026-11-13 18:03:51",
     "construction": "GroupShuffleSplit 50/50 of the source pool by shot; the measurement's procedure between the halves at fold order 0; zero shift",
     "folds_skipped_single_class": 0,
     "imputed_with_source_median": {
@@ -375,8 +375,8 @@
    "n_seeds_requested": 30,
    "skips": {}
   },
-  "seconds": 536.1,
-  "seconds_total": 536.3
+  "seconds": 531.2,
+  "seconds_total": 531.8
  },
  "depth20": {
   "part": "depth20",
@@ -389,10 +389,10 @@
    "scipy": "1.15.3",
    "scikit-learn": "1.7.2",
    "shap": "0.49.1",
-   "package": "3.0.3",
-   "src_sha256": "bda246cdff2095d96640e05956954f99bfa7af13ee9b410016752fa5bf530035"
+   "package": "3.0.4",
+   "src_sha256": "c60ed3f6ec36d46e4d2095027c6b063b702f8e517310d5002cd75777c222426f"
   },
-  "started": "2026-11-03 11:11:18",
+  "started": "2026-11-13 17:58:29",
   "frames": {
    "source_rows": 3363,
    "source_shots": 40,
@@ -646,14 +646,14 @@
     "cut_effective": 2.0790373811037823,
     "provenance": {
      "package": "disruptionpy-qfc",
-     "version": "3.0.3",
+     "version": "3.0.4",
      "estimator": "RandomForestClassifier(class_weight='balanced', max_depth=20, n_estimators=500,\n                       n_jobs=-1, random_state=42)",
      "random_state": 42,
      "attribution": "treeshap",
      "shap_cap": 500,
      "cap_rule": "seeded random subsample without replacement",
      "n_splits": 5,
-     "generated": "2026-11-03 11:16:43",
+     "generated": "2026-11-13 18:03:50",
      "construction": "GroupShuffleSplit 50/50 of the source pool by shot; the measurement's procedure between the halves at fold order 0; zero shift",
      "folds_skipped_single_class": 0,
      "imputed_with_source_median": {
@@ -668,14 +668,14 @@
    "chance_floor": null,
    "provenance": {
     "package": "disruptionpy-qfc",
-    "version": "3.0.3",
+    "version": "3.0.4",
     "estimator": "RandomForestClassifier(class_weight='balanced', max_depth=20, n_estimators=500,\n                       n_jobs=-1, random_state=42)",
     "random_state": 42,
     "attribution": "treeshap",
     "shap_cap": 500,
     "cap_rule": "seeded random subsample without replacement",
     "n_splits": 5,
-    "generated": "2026-11-03 11:20:14",
+    "generated": "2026-11-13 18:07:19",
     "n_fold_orders": 10,
     "n_distinct_fold_orders": 10,
     "n_bootstrap": 0,
@@ -731,14 +731,14 @@
    "cut_effective": 2.0790373811037823,
    "provenance": {
     "package": "disruptionpy-qfc",
-    "version": "3.0.3",
+    "version": "3.0.4",
     "estimator": "RandomForestClassifier(class_weight='balanced', max_depth=20, n_estimators=500,\n                       n_jobs=-1, random_state=42)",
     "random_state": 42,
     "attribution": "treeshap",
     "shap_cap": 500,
     "cap_rule": "seeded random subsample without replacement",
     "n_splits": 5,
-    "generated": "2026-11-03 11:16:43",
+    "generated": "2026-11-13 18:03:50",
     "construction": "GroupShuffleSplit 50/50 of the source pool by shot; the measurement's procedure between the halves at fold order 0; zero shift",
     "folds_skipped_single_class": 0,
     "imputed_with_source_median": {
@@ -750,8 +750,8 @@
    "n_seeds_requested": 30,
    "skips": {}
   },
-  "seconds": 535.7,
-  "seconds_total": 535.8
+  "seconds": 529.8,
+  "seconds_total": 530.5
  },
  "paper_null": {
   "part": "paper_null",
@@ -764,10 +764,10 @@
    "scipy": "1.15.3",
    "scikit-learn": "1.7.2",
    "shap": "0.49.1",
-   "package": "3.0.3",
-   "src_sha256": "bda246cdff2095d96640e05956954f99bfa7af13ee9b410016752fa5bf530035"
+   "package": "3.0.4",
+   "src_sha256": "c60ed3f6ec36d46e4d2095027c6b063b702f8e517310d5002cd75777c222426f"
   },
-  "started": "2026-11-03 11:11:18",
+  "started": "2026-11-13 17:58:29",
   "frames": {
    "source_rows": 3363,
    "source_shots": 40,
@@ -881,7 +881,7 @@
    "all_columns_matched": false,
    "same_column_order": false
   },
-  "seconds_total": 153.5
+  "seconds_total": 151.4
  },
  "prior_gap": {
   "part": "prior_gap",
@@ -894,10 +894,10 @@
    "scipy": "1.15.3",
    "scikit-learn": "1.7.2",
    "shap": "0.49.1",
-   "package": "3.0.3",
-   "src_sha256": "bda246cdff2095d96640e05956954f99bfa7af13ee9b410016752fa5bf530035"
+   "package": "3.0.4",
+   "src_sha256": "c60ed3f6ec36d46e4d2095027c6b063b702f8e517310d5002cd75777c222426f"
   },
-  "started": "2026-11-03 11:20:36",
+  "started": "2026-11-13 18:07:42",
   "frames": {
    "source_rows": 3363,
    "source_shots": 40,
@@ -950,10 +950,10 @@
    "scipy": "1.15.3",
    "scikit-learn": "1.7.2",
    "shap": "0.49.1",
-   "package": "3.0.3",
-   "src_sha256": "bda246cdff2095d96640e05956954f99bfa7af13ee9b410016752fa5bf530035"
+   "package": "3.0.4",
+   "src_sha256": "c60ed3f6ec36d46e4d2095027c6b063b702f8e517310d5002cd75777c222426f"
   },
-  "started": "2026-11-03 11:20:36",
+  "started": "2026-11-13 18:07:42",
   "frames": {
    "source_rows": 3363,
    "source_shots": 40,
@@ -1015,7 +1015,7 @@
   "outcome": "IMMATERIAL",
   "fold_order": 0,
   "rule": "P-UNDERPOWERED if the paired sd exceeds |real - floor|; IMMATERIAL if |delta| < paired sd; P-HOLDS if the matched arm still collapses; otherwise P-VANISHES (fixed before the v2 run)",
-  "seconds_total": 306.6
+  "seconds_total": 305.0
  },
  "floor_seed0": {
   "part": "floor_seed0",
@@ -1028,10 +1028,10 @@
    "scipy": "1.15.3",
    "scikit-learn": "1.7.2",
    "shap": "0.49.1",
-   "package": "3.0.3",
-   "src_sha256": "bda246cdff2095d96640e05956954f99bfa7af13ee9b410016752fa5bf530035"
+   "package": "3.0.4",
+   "src_sha256": "c60ed3f6ec36d46e4d2095027c6b063b702f8e517310d5002cd75777c222426f"
   },
-  "started": "2026-11-03 11:20:37",
+  "started": "2026-11-13 18:07:42",
   "frames": {
    "source_rows": 3363,
    "source_shots": 40,
@@ -1084,14 +1084,14 @@
    "cut_effective": 2.0790373811037823,
    "provenance": {
     "package": "disruptionpy-qfc",
-    "version": "3.0.3",
+    "version": "3.0.4",
     "estimator": "RandomForestClassifier(class_weight='balanced', n_estimators=500, n_jobs=-1,\n                       random_state=0)",
     "random_state": 0,
     "attribution": "treeshap",
     "shap_cap": 500,
     "cap_rule": "seeded random subsample without replacement",
     "n_splits": 5,
-    "generated": "2026-11-03 11:25:39",
+    "generated": "2026-11-13 18:12:44",
     "construction": "GroupShuffleSplit 50/50 of the source pool by shot; the measurement's procedure between the halves at fold order 0; zero shift",
     "folds_skipped_single_class": 0,
     "imputed_with_source_median": {
@@ -1106,7 +1106,7 @@
   "real_from_default": 0.9607142857142856,
   "z": -1.859209883418494,
   "verdict": "INDISTINGUISHABLE",
-  "seconds_total": 302.7
+  "seconds_total": 302.2
  },
  "split_sensitivity": {
   "real": 0.9607142857142856,

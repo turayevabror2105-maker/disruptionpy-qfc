@@ -1,7 +1,9 @@
-"""Every number the README states about the worked example must be the one in ``docs/worked_example.json``.
+"""Every number the README and the files in ``docs/`` state about the worked example must be the one in
+``docs/worked_example.json``.
 
 The record is written by ``scripts/regenerate_worked_example.py``; the slow tests check that the worked example still
-reproduces it. These tests pin the README to the record, need no data, and fail the moment the two disagree.
+reproduces it. These tests pin each statement in the file it lives in (the README's short version, or the docs file
+that holds the detail) to the record, need no data, and fail the moment the two disagree.
 """
 
 from __future__ import annotations
@@ -15,13 +17,20 @@ import pytest
 import disruptionpy_qfc as dq
 
 ROOT = Path(__file__).resolve().parents[1]
-README = " ".join((ROOT / "README.md").read_text(encoding="utf-8").split())   # line breaks do not matter
+DOC_FILES = ["README.md"] + sorted("docs/" + f.name for f in (ROOT / "docs").glob("*.md"))
+RAW = {name: (ROOT / name).read_text(encoding="utf-8") for name in DOC_FILES}
+TEXT = {name: " ".join(raw.split()) for name, raw in RAW.items()}   # line breaks do not matter
+README = TEXT["README.md"]
+WORKED = TEXT["docs/WORKED_EXAMPLE.md"]     # the full C-Mod section
+METHOD = TEXT["docs/METHOD.md"]             # terms, verdict rules, procedure
+API = TEXT["docs/API.md"]                   # frames, options, attributions, exported names
+LIMITS = TEXT["docs/LIMITS.md"]             # what the package does not do, in full
 REC = json.loads((ROOT / "docs" / "worked_example.json").read_text(encoding="utf-8"))
 
 
-def _has(fmt: str, value: float, what: str):
+def _has(fmt: str, value: float, what: str, doc: str = "docs/WORKED_EXAMPLE.md"):
     text = fmt % value
-    assert text in README, f"README does not state {what} as {text}"
+    assert text in TEXT[doc], f"{doc} does not state {what} as {text}"
 
 
 def test_the_record_is_of_this_version_and_complete():
@@ -43,12 +52,17 @@ def test_the_worked_example_numbers():
     _has("−%.2f", -r["z"], "z")
     _has("%.4f", r["resolution"], "the resolution")
     assert r["verdict"] == "COLLAPSE" and "**COLLAPSE** (%d of the 10 fold orders" % r["verdict_per_order"].count(
-        "COLLAPSE") in README
+        "COLLAPSE") in WORKED
     assert f["n_seeds"] == 30 and len(r["qfc_per_order"]) == 10
     fr = d["frames"]
-    assert "%s rows from %d discharges" % (format(fr["source_rows"], ","), fr["source_shots"]) in README
+    assert "%s rows from %d discharges" % (format(fr["source_rows"], ","), fr["source_shots"]) in WORKED
     _has("%.3f;", d["priors"]["source"], "the source prior")
     _has("rate %.3f", d["priors"]["target"], "the target prior")
+    # the README's short version of the same result
+    for fmt, v, what in (("target AUC of %.3f", r["auc"], "the target AUC"), ("QFC = %.4f,", r["qfc"], "the QFC"),
+                         ("at %.4f on average over 30 splits", f["mean"], "the floor mean"),
+                         ("z = −%.2f (negative", -r["z"], "z"), ("against %.3f, the 5%% cut for 30", r["exact_cut"], "the cut")):
+        _has(fmt, v, what, "README.md")
 
 
 def test_the_recorded_verdict_follows_from_the_recorded_numbers():
@@ -70,6 +84,8 @@ def test_the_split_sensitivity_is_stated_both_ways():
     _has("cut of %.3f", p["cut"], "the pooled cut")
     assert p["verdict"] == "COLLAPSE"
     _has("margin of %.3f", abs(p["z"]) - p["cut"], "the pooled margin")
+    _has("INDISTINGUISHABLE (z = −%.2f)", -a["z"], "the other floor's z", "README.md")
+    _has("COLLAPSE (z = −%.2f)", -p["z"], "the pooled z", "README.md")
 
 
 def test_the_label_prior_controls():
@@ -115,13 +131,13 @@ def test_the_paper_construction_and_depth_numbers():
     assert d20["null_floor"]["mean"] == REC["default"]["null_floor"]["mean"]
     s = p["frames_vs_paper"]
     assert s["labels_equal"] and s["shot_partition_equal"] and s["shape_equal"]
-    assert "%d of their 48 feature columns are bit-identical" % s["n_columns_bit_identical"] in README
+    assert "%d of their 48 feature columns are bit-identical" % s["n_columns_bit_identical"] in WORKED
     diffs = s["unmatched_max_abs_diff_same_position"]
     assert len(diffs) == 48 - s["n_columns_bit_identical"] and all(k.endswith("_skew") for k in diffs)
-    assert "the other %s, the skews, differ by at most 4.5e-16" % {6: "six"}[len(diffs)] in README
+    assert "the other %s, the skews, differ by at most 4.5e-16" % {6: "six"}[len(diffs)] in WORKED
     assert max(diffs.values()) <= 4.5e-16
     assert REC["default"]["result"]["provenance"]["imputed_with_source_median"]["source"] == {"toroidal_B_field_skew": 18}
-    assert "the same 18 source rows imputed with the same median" in README
+    assert "the same 18 source rows imputed with the same median" in WORKED
     _has("%.4f, z", d20["result"]["qfc"], "the depth-20 QFC")
     _has("−%.2f, COLLAPSE", -d20["result"]["z"], "the depth-20 z")
     assert d20["result"]["verdict"] == "COLLAPSE"
@@ -170,12 +186,13 @@ def test_every_test_the_objections_table_cites_exists():
         assert (ROOT / f).exists(), f"ATTACKS.md cites a missing file {f}"
 
 
-def test_the_readme_quotes_no_version_2_number():
+def test_the_docs_quote_no_version_2_number():
     """Version 2's worked example (QFC 0.9607, floor 0.9801 +- 0.0072, z = -2.69) and version 3.0.0's (QFC 0.9626,
     z = -2.43) came from other procedures or features; they must not reappear. Version 3.0.2's QFC happens to round
     to 0.9607 as well, so that figure is allowed only as the record's own value."""
     for stale in ("2.69", "0.0072", "0.9626", "2.43", "0.391", "threshold_flag"):
-        assert stale not in README, f"README still carries the superseded figure {stale}"
+        for name, text in TEXT.items():
+            assert stale not in text, f"{name} still carries the superseded figure {stale}"
     assert "%.4f" % REC["default"]["result"]["qfc"] == "0.9607"
 
 
@@ -196,68 +213,83 @@ def test_the_signal_shares_the_readme_states():
     d_s, d_t = share(s, "density"), share(t, "density")
     p_s, p_t = share(s, "plasma_current"), share(t, "plasma_current")
     assert p_s > d_s and d_t > p_t
-    assert "density's share of the total attribution rises from %.1f%% to %.1f%%" % (100 * d_s, 100 * d_t) in README
-    assert "plasma current's falls from %.1f%% to %.1f%%" % (100 * p_s, 100 * p_t) in README
+    assert "density's share of the total attribution rises from %.1f%% to %.1f%%" % (100 * d_s, 100 * d_t) in WORKED
+    assert "density's share of the attribution rises from %.1f%% to %.1f%%" % (100 * d_s, 100 * d_t) in README
+    for doc in (WORKED, README):
+        assert "plasma current's falls from %.1f%% to %.1f%%" % (100 * p_s, 100 * p_t) in doc
     top = sorted(zip(t, f), reverse=True)
     assert [c for _, c in top[:3]] == ["plasma_current_min", "density_max", "density_mean"]
     src_top = sorted(zip(s, f), reverse=True)
     assert [c for _, c in src_top[:2]] == ["plasma_current_mean", "plasma_current_min"]
     assert ("plasma current still leads: its mean and its minimum are the two largest in the source, and its "
-            "minimum is the largest in the target, now followed by density's maximum and mean") in README
+            "minimum is the largest in the target, now followed by density's maximum and mean") in WORKED
     assert ("its mean and its minimum are the two largest on the training campaigns, and its minimum is the "
             "largest on the later ones") in README
 
 
-def test_the_readme_states_what_the_code_does():
-    """Statements about the code a reader would act on: the excluded columns, the cut's formula, the
-    chance-floor rule and the shap versions the KernelSHAP pin is about."""
+def test_the_docs_state_what_the_code_does():
+    """Statements about the code a reader would act on: the excluded columns and the shap versions the KernelSHAP
+    pin is about (docs/API.md), the cut's formula and the chance-floor rule (docs/METHOD.md and the README)."""
     import math
 
     from scipy import stats
 
     for c in sorted(set(dq.DEFAULT_EXCLUDE_COLS) - {"shot", "label"}):
-        assert "`%s`" % c in README, f"README does not name the excluded column {c}"
-    assert "t(0.975, 29) × √(1 + 1/30)" in README
+        assert "`%s`" % c in API, f"docs/API.md does not name the excluded column {c}"
+    assert "t(0.975, 29) × √(1 + 1/30)" in METHOD
     assert dq.exact_cut(30) == pytest.approx(stats.t.ppf(0.975, 29) * math.sqrt(1 + 1 / 30), abs=1e-15)
-    assert "%.3f for 30 null draws" % dq.exact_cut(30) in README
-    assert "z ≥ cut, and the floor's mean is not below the chance floor's mean" in README
+    assert "%.3f for 30 null draws" % dq.exact_cut(30) in METHOD
+    assert "It is exact when the draws are independent and normal" in METHOD
+    assert "(exact for independent, normal draws)" in README
+    assert "z ≥ cut, and the floor's mean is not below the chance floor's mean" in METHOD
+    assert "ROBUST if z ≥ cut and the floor's mean is not below that of a floor built with shuffled labels" in README
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'shap>=0.45' in pyproject and "this package allows shap 0.45" in README
+    assert 'shap>=0.45' in pyproject and "this package allows shap 0.45" in API
 
 
 def test_the_runtime_the_readme_states_is_the_records():
-    assert "took %d seconds" % round(REC["default"]["seconds"]) in README
+    for doc in ("README.md", "docs/WORKED_EXAMPLE.md", "docs/API.md"):
+        assert "took %d seconds" % round(REC["default"]["seconds"]) in TEXT[doc], doc
 
 
 def test_the_readme_keeps_its_scope_and_independence_statements():
     """The README's honesty statements are part of what it claims: the package is independent, the C-Mod collapse is
-    near the line, the paper is unpublished, and its theorem does not cover the random forests the package tests."""
+    near the line, the paper is unpublished, its theorem does not cover the random forests the package tests, and a
+    COLLAPSE is a change in reliance, not proof of a fault. Each is pinned in the file it lives in."""
     for line in ("not affiliated with, reviewed or endorsed by MIT PSFC or the DisruptionPy maintainers",
                  "It is close to the line.",
                  "(A. Turayev, not yet published;",
                  "Random forests, including the one in the C-Mod example, are outside the proof",
+                 "for them the change is measured, not proved",
                  "Only the training data need labels",
                  "A COLLAPSE is not by itself a fault.",
-                 "scores this row in its standard scoring"):
+                 "not that the new reliance is wrong"):
         assert line in README, f"README no longer states: {line}"
+    for line in ("A COLLAPSE is not by itself a fault.",
+                 "not that the new reliance is wrong: it may be the same physics reached through another signal"):
+        assert line in LIMITS, f"docs/LIMITS.md no longer states: {line}"
+    for line in ("scores this row in its standard scoring",
+                 "Read this as evidence that the explanation moved, near the edge of what this pool can resolve, "
+                 "not as a settled collapse.",
+                 "The paper's census, which is not yet published"):
+        assert line in WORKED, f"docs/WORKED_EXAMPLE.md no longer states: {line}"
 
 
-RAW_README = (ROOT / "README.md").read_text(encoding="utf-8")
 FENCE = "```"
 
 
-def _python_block(marker: str) -> str:
-    """The README's one Python code block that contains ``marker``, as written."""
-    blocks = [b.split(FENCE)[0] for b in RAW_README.split(FENCE + "python")[1:]]
+def _python_block(marker: str, doc: str) -> str:
+    """The one Python code block in ``doc`` that contains ``marker``, as written."""
+    blocks = [b.split(FENCE)[0] for b in RAW[doc].split(FENCE + "python")[1:]]
     found = [b for b in blocks if marker in b]
     assert len(found) == 1, f"expected one Python block containing {marker!r}, found {len(found)}"
     return found[0]
 
 
-def test_every_public_name_is_in_the_readme():
-    """The API table names everything the package exports, so a reader never meets an undocumented name."""
+def test_every_public_name_is_in_the_api_reference():
+    """The table in docs/API.md names everything the package exports, so a reader never meets an undocumented name."""
     for name in dq.__all__:
-        assert "`%s" % name in RAW_README, f"README does not document the exported name {name}"
+        assert "`%s" % name in RAW["docs/API.md"], f"docs/API.md does not document the exported name {name}"
 
 
 class _StubModel:
@@ -272,15 +304,15 @@ class _StubModel:
 
 
 def test_the_custom_attribution_example_runs_as_written(monkeypatch):
-    """The README's custom method is self-contained: executing its block defines it, it hands it to screen(),
+    """The custom method in docs/API.md is self-contained: executing its block defines it, it hands it to screen(),
     and the package accepts what it returns. Nothing is fitted: screen() is replaced and the model is a stub."""
     import disruptionpy_qfc.core as core
 
-    assert "dprf_contributions" not in RAW_README
+    assert all("dprf_contributions" not in raw for raw in RAW.values())
     calls = []
     monkeypatch.setattr(dq, "screen", lambda *a, **k: calls.append(k) or "result")
     ns = {"source_df": None, "target_df": None}
-    exec(compile(_python_block("def median_occlusion"), "README", "exec"), ns)
+    exec(compile(_python_block("def median_occlusion", "docs/API.md"), "docs/API.md", "exec"), ns)
     fn = ns["median_occlusion"]
     assert calls == [{"attribution": fn}]
 
@@ -294,7 +326,7 @@ def test_the_custom_attribution_example_runs_as_written(monkeypatch):
 
 
 def test_the_light_check_is_accepted_and_its_numbers_hold(monkeypatch):
-    """The README's quick installation check passes only arguments screen() accepts, and the fit count and the
+    """The quick installation check in docs/WORKED_EXAMPLE.md passes only arguments screen() accepts, and the fit count and the
     cut it states follow from its settings. Nothing is loaded or fitted: the frames and screen() are replaced."""
     import inspect
 
@@ -314,13 +346,48 @@ def test_the_light_check_is_accepted_and_its_numbers_hold(monkeypatch):
 
     monkeypatch.setattr(dq, "screen", fake_screen)
     monkeypatch.setattr(demo, "build_demo_frames", lambda path: ("source", "target"))
-    exec(compile(_python_block("build_demo_frames("), "README", "exec"), {})
+    exec(compile(_python_block("build_demo_frames(", "docs/WORKED_EXAMPLE.md"), "docs/WORKED_EXAMPLE.md", "exec"), {})
     kw = seen[0]
     assert kw["model"].n_estimators == 100 and kw["n_fold_orders"] == 1 and kw["shap_cap"] == 200
     n = kw["n_seeds"]
-    assert "That is %d fits of 100 trees instead of up to 231 of 500" % (1 + 5 * kw["n_fold_orders"] + 6 * n) in README
-    assert "(%d more if the reading is ROBUST" % (6 * dq.N_CHANCE_DRAWS) in README
-    assert "%d null draws give a cut of %.3f instead of %.3f" % (n, dq.exact_cut(n), dq.exact_cut(30)) in README
+    assert "That is %d fits of 100 trees instead of up to 231 of 500" % (1 + 5 * kw["n_fold_orders"] + 6 * n) in WORKED
+    assert "(%d more if the reading is ROBUST" % (6 * dq.N_CHANCE_DRAWS) in WORKED
+    assert "%d null draws give a cut of %.3f instead of %.3f" % (n, dq.exact_cut(n), dq.exact_cut(30)) in WORKED
+
+
+def _anchors(raw: str) -> set:
+    """GitHub's heading anchors for a Markdown file: lower case, punctuation other than - and _ dropped, spaces to -."""
+    out, fenced = set(), False
+    for line in raw.splitlines():
+        if line.startswith(FENCE):
+            fenced = not fenced
+        elif line.startswith("#") and not fenced:
+            title = line.lstrip("#").strip().lower()
+            out.add("".join(c for c in title if c.isalnum() or c in "-_ ").replace(" ", "-"))
+    return out
+
+
+def test_every_relative_link_resolves():
+    """Every relative link in the README and in docs/ points at a file that exists, and every #anchor at a heading in
+    it, so moving text between files cannot leave a reader at a dead link. The README indexes every docs file."""
+    import re
+
+    checked = 0
+    for name, raw in RAW.items():
+        here = (ROOT / name).parent
+        for target in re.findall("[]][(]([^) ]+)[)]", raw):
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+            path, _, anchor = target.partition("#")
+            dest = (here / path).resolve() if path else (ROOT / name).resolve()
+            assert dest.exists(), f"{name} links to a missing file {target}"
+            if anchor:
+                assert dest.suffix == ".md" and anchor in _anchors(dest.read_text(encoding="utf-8")), (
+                    f"{name} links to a missing anchor {target}")
+            checked += 1
+    assert checked > 20
+    for name in DOC_FILES[1:] + ["docs/worked_example.json"]:
+        assert "](%s)" % name in RAW["README.md"], f"the README's documentation index does not link {name}"
 
 
 def _src_sha256() -> str:

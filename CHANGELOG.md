@@ -1,9 +1,9 @@
 # Changelog
 
-## Unreleased
+## 3.0.4 (2026-11-13)
 
-No change to the package's code in `src/` or to any number; documentation, tests, CI and packaging metadata
-only. The README opens with the C-Mod result on the Open Density Limit
+No change to the measurement or to any number. Three wording fixes in `src/` (below); the rest is documentation,
+tests, CI and packaging metadata. The README opens with the C-Mod result on the Open Density Limit
 Database and a three-command way to reproduce it, states that the package is independent of MIT PSFC and the
 DisruptionPy maintainers, and credits DisruptionPy, the database, DPRF and Montes et al. (2019). It now also says
 what "the paper" is (unpublished; its theorem covers Bayes-optimal classifiers under its stated assumptions, and
@@ -24,7 +24,7 @@ each.
 Usability. The custom-attribution example called an undefined `dprf_contributions`; it is now a self-contained,
 numpy-only method (`median_occlusion`) with the calling contract written out (arguments, column order, imputed
 values, return shape, absolute values, seeding, refits). The install section states the Python and git
-requirement and the `curl.exe` spelling on Windows PowerShell 5.1; the demo's runtime is documented (536 s on 32
+requirement and the `curl.exe` spelling on Windows PowerShell 5.1; the demo's runtime is documented (531 s on 32
 cores in the record, a laptop not timed) with a light installation check whose numbers are marked as not the
 record's; the result's main fields and every exported name are listed. Tests execute both README code blocks
 against stubs (nothing is fitted) and require every exported name to be documented.
@@ -37,11 +37,13 @@ standard scoring, which removes an apparent clash with the primary scoring the p
 do" now says that a COLLAPSE is a change in reliance, not by itself a fault; `docs/ATTACKS.md` row C2 states the
 cut's assumption and row G1 cites the record-hash test.
 
-Planned for the next release (they change `src/`, which the record's `src_sha256` hashes, so they wait for a
-regeneration): the `_kernelshap` docstring, which says shap keeps "each row's ten largest contributors" (shap
-selects them by least-angle regression) and that the default "was auto in shap 0.45" (it was `"auto"` until 0.47);
-a hint in the missing-label error when the frame has `time_until_disrupt`, pointing to the labelling step; and a
-hint in the attribution-shape error when a custom function returns one array per class. Any release, even a documentation-only one, changes `__version__` in `src/__init__.py`, which the hash covers, so each release regenerates `docs/worked_example.json` (one run of `scripts/regenerate_worked_example.py`, 536 s on the 32-core machine in the record).
+Restructure. The README is now the short version (the question, the C-Mod result, the three commands, how it works, the limits, the paper, a documentation index and the credits); the detail moved, unchanged apart from its links, to `docs/WORKED_EXAMPLE.md`, `docs/METHOD.md`, `docs/API.md`, `docs/LIMITS.md` and `docs/TESTING.md`. `docs/ATTACKS.md` points to the new locations, the docs tests pin each statement in the file it now lives in, and a new test requires every relative link and anchor in the README and `docs/` to resolve.
+
+Code (`src/`), wording only: the `_kernelshap` docstring now says shap selects ten features per row by least-angle
+regression (it said "ten largest contributors") and that the default was `"auto"` before shap 0.47 (it said 0.45); the
+missing-label error now points to deriving a 0/1 label when the frame has `time_until_disrupt`; and the
+attribution-shape error names the common cause, one array per class. Because `src/` changed, `docs/worked_example.json`
+was regenerated with `scripts/regenerate_worked_example.py`; every number in it is unchanged.
 
 ## 3.0.3 (2026-11-03)
 

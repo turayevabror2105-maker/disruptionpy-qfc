@@ -178,8 +178,8 @@ def _kernelshap(model, X, X_train, seed):
     from the training rows and 200 coalition samples per row. Seeded, so a call is reproducible; numpy's
     global random state, which shap draws from, is restored afterwards. The regularisation is pinned to
     ``l1_reg="num_features(10)"``, the current shap default, because the default itself changed between shap
-    versions (it was ``"auto"`` in shap 0.45). With more than ten features this keeps each row's ten largest
-    contributors and sets the rest to zero; for another choice, pass your own callable. It costs about
+    versions (it was ``"auto"`` before shap 0.47). With more than ten features this selects ten features per
+    row by least-angle regression and sets the rest to zero; for another choice, pass your own callable. It costs about
     ``200 x 30`` model evaluations per explained row."""
     import shap
 
@@ -240,7 +240,8 @@ def _explain(model, Z: np.ndarray, X_train: np.ndarray, cap: Optional[int], seed
     sv = np.asarray(attr(model, Z, X_train, seed), dtype=float)
     if sv.shape != Z.shape:
         raise ValueError("the attribution returned shape %s for %s explained rows; it must return one row of "
-                         "per-feature attributions per explained row" % (sv.shape, Z.shape))
+                         "per-feature attributions per explained row (a common cause is returning one array per "
+                         "class; return the positive class only)" % (sv.shape, Z.shape))
     return np.abs(sv).mean(axis=0)
 
 
@@ -508,6 +509,8 @@ def _validate(df, shot_col: str, name: str, label_col: Optional[str] = None, lab
                 f"{' ...' if len(df.columns) > 12 else ''}. "
                 f"Pass label_col=/shot_col= if your frame uses different names "
                 f"(disruption-py's DataFrame output uses 'shot')."
+                + (" The frame has 'time_until_disrupt'; derive a 0/1 label column from it first."
+                   if col == label_col and "time_until_disrupt" in df.columns else "")
             )
     if len(df) == 0:
         raise ValueError(f"{name} is empty")
