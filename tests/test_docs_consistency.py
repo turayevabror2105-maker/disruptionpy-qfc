@@ -337,7 +337,10 @@ def _src_sha256() -> str:
 def test_the_record_was_made_by_the_code_in_src():
     """The record's numbers come from the code in ``src/`` as it is now. Any change there, a docstring or the
     version string included, fails this test until ``docs/worked_example.json`` is regenerated, so a changelog
-    entry that says "no code changed" is checked rather than asserted."""
+    entry that says "no code changed" is checked rather than asserted. Skipped where ``src/`` is absent (the CI job
+    that tests the installed wheel hides it), since there is no source tree to hash."""
+    if not (ROOT / "src" / "disruptionpy_qfc").is_dir():
+        pytest.skip("no src/ tree here (installed-wheel test run)")
     assert REC["default"]["env"]["src_sha256"] == _src_sha256(), (
         "src/ differs from the code that produced docs/worked_example.json; regenerate the record "
         "(scripts/regenerate_worked_example.py) before releasing")
