@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+Documentation only. The summary of the two class-balance controls now says the prior explains at most part
+of the drop, as the controls themselves conclude (it said it does not explain it); the 0.164 margin is labelled
+as a z margin; the worked example's command writes `--out` as the README's does; and the README states the cut
+before explaining a negative z.
+
 ## 3.0.4 (2026-11-13)
 
 No change to the measurement or to any number. Three wording fixes in `src/` (below); the rest is documentation,
@@ -15,7 +22,7 @@ Corrections against the record and the code. The single-feature sentence said pl
 source its mean is (0.07049 against 0.07036), so the README now says plasma current's mean and minimum are the
 source's two largest and its minimum the target's largest. The cut is given with its formula and its assumption
 (exact for independent, normal draws); z with its formula; the ROBUST rule as the code applies it (the floor's
-mean not below the chance floor's mean); `shot_id` is added to the excluded columns the README lists; the
+mean not below the chance floor's mean); `shot_id` is added to the list of excluded columns (now in `docs/API.md`); the
 KernelSHAP `l1_reg` pin is dated (shap's default since 0.47; the package allows 0.45); the benchmark line no
 longer reads as if needing no target labels set QFC apart from Explanation Shift, which needs none either; and
 `docs/ATTACKS.md` row H2 no longer cites a README section ("Quick start") that does not exist. A test pins
@@ -66,12 +73,12 @@ paper did, and report the count per column (`provenance["imputed_with_source_med
 refuse it. On C-Mod 18 source values are imputed, the same rows and the same median as the paper's, and 42 of the 48
 columns are now bit-identical to the paper's arrays (the six skews within 4.5e-16), so the paper's own null
 construction rebuilt on these frames gives the paper's floor, 0.9913 ± 0.0057. The worked example moves from
-QFC 0.9626, floor 0.9801 ± 0.0072, z = -2.43 to QFC 0.9607, floor 0.9805 ± 0.0069, z = -2.87, still COLLAPSE.
+QFC 0.9626, floor 0.9801 ± 0.0072, z = −2.43 to QFC 0.9607, floor 0.9805 ± 0.0069, z = −2.87, still COLLAPSE.
 The TCV L-mode to H-mode case is unchanged (its features have no undefined values).
 
 ## 3.0.1 (2026-11-03)
 
-Wording only; no number or behaviour changed. The README and the demo said the 2014-2016 C-Mod discharges
+Wording only; no number or behaviour changed. The README and the demo said the 2014–2016 C-Mod discharges
 have no density-limit labels; the public release labels them stable throughout, which is why they are left out.
 `docs/ATTACKS.md` row P14 named a row-weighting attribution callable as a remedy that the README does not give;
 the remedy it gives, resampling to a common time base, is the one now cited. `docs/worked_example.json` was

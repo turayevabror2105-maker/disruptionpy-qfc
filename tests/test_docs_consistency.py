@@ -61,7 +61,7 @@ def test_the_worked_example_numbers():
     # the README's short version of the same result
     for fmt, v, what in (("target AUC of %.3f", r["auc"], "the target AUC"), ("QFC = %.4f,", r["qfc"], "the QFC"),
                          ("at %.4f on average over 30 splits", f["mean"], "the floor mean"),
-                         ("z = −%.2f (negative", -r["z"], "z"), ("against %.3f, the 5%% cut for 30", r["exact_cut"], "the cut")):
+                         ("z = −%.2f against", -r["z"], "z"), ("against %.3f, the 5%% cut for 30", r["exact_cut"], "the cut")):
         _has(fmt, v, what, "README.md")
 
 

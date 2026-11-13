@@ -7,6 +7,7 @@ change underneath. Accuracy metrics cannot see that. This package measures it be
 the new data, and tells you whether what it measured is more than the change you would see with no shift at all.
 Only the training data need labels, so a new campaign, or a new machine's first discharges, can be screened before
 any disruption on it is labelled.
+
 The measurement is QFC (Quantitative Feature Consistency): the rank correlation between the feature importances a
 model shows on the data it was trained on and on the data it is deployed on.
 
@@ -20,8 +21,9 @@ On the public Open Density Limit Database (Maris, Rea, Trevisan and the Alcator 
 random forest trained on the Alcator C-Mod campaigns of 2000, 2001 and 2003 and deployed on 2005 and 2009 keeps a
 target AUC of 0.939. Its feature ranking on the later campaigns agrees with its ranking on the training campaigns at
 QFC = 0.9607, while two random halves of the training campaigns agree with each other at 0.9805 on average over 30
-splits. That is z = −2.87 (negative: less agreement than with no shift) against 2.079, the 5% cut for 30
-draws: the ranking moved more than no shift explains, and the verdict is COLLAPSE. It is close to the line.
+splits. That is z = −2.87 against 2.079, the 5% cut for 30
+draws. A negative z means less agreement than with no shift, so the ranking moved more than no shift explains,
+and the verdict is COLLAPSE. It is close to the line.
 Thirty other splits of the same 40 training discharges give INDISTINGUISHABLE (z = −1.86), and all sixty
 together give COLLAPSE (z = −2.18).
 
@@ -32,7 +34,7 @@ is the largest on the later ones. This describes the one measurement; the packag
 single signal's share, so it is not itself a test.
 
 The [worked example](docs/WORKED_EXAMPLE.md) has the full result, two controls showing that the change in class
-balance does not explain it, and the reason the paper's figures for this comparison differ.
+balance explains at most part of it, and the reason the paper's figures for this comparison differ.
 
 ## Run the C-Mod example in three commands
 

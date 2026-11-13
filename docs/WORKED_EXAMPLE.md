@@ -10,7 +10,7 @@ The README's [three commands](../README.md#run-the-c-mod-example-in-three-comman
 data and run the demo:
 
 ```bash
-python -m disruptionpy_qfc.demo --data DL_DataFrame.csv
+python -m disruptionpy_qfc.demo --data DL_DataFrame.csv --out cmod_result.json
 ```
 
 The second of the three commands fetches the public release at a fixed commit (24,605,618 bytes, SHA-256
@@ -70,7 +70,7 @@ The terms are defined in [METHOD.md](METHOD.md#what-the-words-mean).
 excellent, yet two halves of the source campaigns alone agree with each other at 0.980. At the default seeds that
 is a collapse, but the floor depends on which 30 splits of the 40 source shots it draws. Drawing 30 other splits
 (seeds 0–29, which set each draw's forest seed as well as its split) gives a floor of 0.9820 ± 0.0115, z = −1.86, INDISTINGUISHABLE; pooling all 60 draws gives
-0.9813 ± 0.0094, z = −2.18 against that count's cut of 2.018, COLLAPSE by a margin of 0.164. Forty shots is a
+0.9813 ± 0.0094, z = −2.18 against that count's cut of 2.018, COLLAPSE by a margin of 0.164 in z. Forty shots is a
 small pool, and one split (seed 8, 0.930) sits far below the rest. Read this as evidence that the explanation
 moved, near the edge of what this pool can resolve, not as a settled collapse.
 
@@ -86,8 +86,8 @@ n_G = I_p/(πa²) (Greenwald, *Plasma Phys. Control. Fusion* 44, R27, 2002); whe
 physics of the later campaigns or their mix of discharges is a question this measurement cannot answer.
 
 **Is it just the label-prior shift?** The positive rate moves from 0.508 to 0.721, so a reader can ask whether the
-difference is class balance. Two controls, each with outcomes fixed before it was first run, say the prior does not
-explain it. *Inside the null:* each split carries its own prior gap, and two of the 30 draws have a gap larger than
+difference is class balance. Two controls, each with outcomes fixed before it was first run, say the prior
+explains at most part of it. *Inside the null:* each split carries its own prior gap, and two of the 30 draws have a gap larger than
 the real one (0.294 and 0.285 against 0.212), yet they score 0.979 and 0.973, z = −0.25 and −1.12. Across the 30
 draws the gap does not predict QFC (Spearman ρ = −0.119, p = 0.530); the fitted slope attributes 16% of the
 observed drop to the prior gap at its point estimate and 54% at the steep end of its 95% interval, so the gap

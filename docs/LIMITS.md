@@ -4,8 +4,8 @@ Each limit in full. The [README](../README.md#what-this-does-not-do) lists them 
 
 - **It is not a disruption predictor, and it does not say whether yours is good.** It says whether your model
   relies on the same features in both environments.
-- **A high QFC is not a safety argument.** It means the importance order is preserved, which a stable explanation
-  needs but safe deployment needs far more than.
+- **A high QFC is not a safety argument.** It means the importance order is preserved. A stable explanation needs
+  that; safe deployment needs far more.
 - **It uses ranks, not sizes.** Two environments can agree on the order of importance while differing in how much
   each feature matters.
 - **Every row counts once.** Long shots and densely sampled phases weigh more in the importance vectors, so a
