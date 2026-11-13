@@ -17,3 +17,9 @@ outputs/
 *.ipynb.bak
 mast_frame.csv
 DL_DataFrame.csv
+cmod_result.json
+.mypy_cache/
+.ruff_cache/
+.vscode/
+.idea/
+.DS_Store

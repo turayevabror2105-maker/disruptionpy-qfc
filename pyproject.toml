@@ -28,6 +28,7 @@ dev = ["pytest>=7"]
 [project.urls]
 Homepage = "https://github.com/turayevabror2105-maker/disruptionpy-qfc"
 Issues = "https://github.com/turayevabror2105-maker/disruptionpy-qfc/issues"
+Changelog = "https://github.com/turayevabror2105-maker/disruptionpy-qfc/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/disruptionpy_qfc"]

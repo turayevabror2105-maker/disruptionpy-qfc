@@ -5,32 +5,45 @@
 A model trained on one set of discharges can keep a high AUC on a later campaign while the features it leans on
 change underneath. Accuracy metrics cannot see that. This package measures it before deployment, without labels on
 the new data, and tells you whether what it measured is more than the change you would see with no shift at all.
+Only the training data need labels, so a new campaign, or a new machine's first discharges, can be screened before
+any disruption on it is labelled.
 The measurement is QFC (Quantitative Feature Consistency): the rank correlation between the feature importances a
 model shows on the data it was trained on and on the data it is deployed on.
+
+QFC, its no-shift floor and its verdicts are defined in the author's paper (A. Turayev, not yet published; "the
+paper" below). The paper also proves exactly when the importance ranking of a Bayes-optimal classifier changes under
+a shift, under the assumptions it states, and the core of that proof is machine-checked in Lean 4. Random forests,
+including the one in the C-Mod example, are outside the proof: for them the change is measured, not proved. The
+paper and its Lean code are not public yet, so the paper's figures quoted below cannot be checked from this
+repository; every figure the package itself computed can be (see [Tests](#tests)).
 
 This is independent work by one researcher, not affiliated with, reviewed or endorsed by MIT PSFC or the
 DisruptionPy maintainers; the name only says which data format it reads. DisruptionPy, the Open Density Limit
 Database and the DPRF predictor, on which it builds, are credited under [Credits](#credits-citation-licence).
 
-## On the Open Density Limit Database
+## What it found on the Open Density Limit Database
 
 On the public Open Density Limit Database (Maris, Rea, Trevisan and the Alcator C-Mod Team, MIT PSFC, 2025), a
 random forest trained on the Alcator C-Mod campaigns of 2000, 2001 and 2003 and deployed on 2005 and 2009 keeps a
 target AUC of 0.939. Its feature ranking on the later campaigns agrees with its ranking on the training campaigns at
 QFC = 0.9607, while two random halves of the training campaigns agree with each other at 0.9805 on average over 30
-splits. That is z = −2.87 against a cut of 2.079: the ranking moved more than no shift explains, and the verdict is
-COLLAPSE. It is close to the line. Thirty other splits of the same 40 training discharges give INDISTINGUISHABLE
-(z = −1.86), and all sixty together give COLLAPSE (z = −2.18).
+splits. That is z = −2.87 (negative: less agreement than with no shift) against 2.079, the 5% cut for 30
+draws: the ranking moved more than no shift explains, and the verdict is COLLAPSE. It is close to the line.
+Thirty other splits of the same 40 training discharges give INDISTINGUISHABLE (z = −1.86), and all sixty
+together give COLLAPSE (z = −2.18).
 
 What moved: summed over each signal's eight window statistics, density's share of the attribution rises from 32.1%
 to 41.3% and plasma current's falls from 39.5% to 31.3%, so density overtakes plasma current. Among single features
-the largest is still plasma current's minimum. This describes the one measurement; the package builds no no-shift
-floor for a single signal's share, so it is not itself a test.
+plasma current still leads: its mean and its minimum are the two largest on the training campaigns, and its minimum
+is the largest on the later ones. This describes the one measurement; the package builds no no-shift floor for a
+single signal's share, so it is not itself a test.
 
 The details, two controls for the change in class balance, and the reason the paper's figures for this comparison
 differ are in the [worked example](#worked-example-alcator-c-mod-the-2000-2001-and-2003-campaigns-to-2005-and-2009).
 
 ## Run the C-Mod example in three commands
+
+You need Python 3.10 or later and git; the install also brings numpy, pandas, scikit-learn, scipy and shap.
 
 ```bash
 pip install "git+https://github.com/turayevabror2105-maker/disruptionpy-qfc@v3.0.3"
@@ -40,8 +53,35 @@ python -m disruptionpy_qfc.demo --data DL_DataFrame.csv --out cmod_result.json
 
 The second command fetches the public release at a fixed commit (24,605,618 bytes, SHA-256
 `c296028985f880cfa341030af0b54d7fe7092b639156281dba454b0926385318`); from it the demo builds frames with the record's
-row, discharge and label counts. The demo prints the frame sizes and the result's `summary()`, and `--out` writes the
-full result as JSON. The recorded run took 536 seconds on a 32-core machine; it takes longer on fewer cores.
+row, discharge and label counts. On Windows PowerShell 5.1, `curl` is an alias of `Invoke-WebRequest`, so type
+`curl.exe` there. The demo prints the frame sizes and the result's `summary()` (QFC, floor, z, cut, resolution and
+verdict), and `--out` writes the full result as JSON: `result.to_dict()` under `"result"` and a note on the left-out
+campaigns under `"excluded"`.
+
+**How long it takes.** The recorded run took 536 seconds, about nine minutes, on a 32-core Linux machine
+(`docs/worked_example.json`, `default.seconds`). A laptop has not been timed. The run is at most 231 fits of a
+500-tree forest plus their TreeSHAP attributions (see Cost under [Options](#options)), and the forest fits use every
+core (`n_jobs=-1`), so on a laptop expect a multiple of that time and leave the machine otherwise idle. Only the
+default settings reproduce the record.
+
+**To check that everything runs first**, a much lighter screen of the same frames:
+
+```python
+from sklearn.ensemble import RandomForestClassifier
+from disruptionpy_qfc import screen
+from disruptionpy_qfc.demo import build_demo_frames
+
+source, target = build_demo_frames("DL_DataFrame.csv")
+light = RandomForestClassifier(n_estimators=100, class_weight="balanced", n_jobs=-1)
+check = screen(source, target, model=light, n_seeds=10, n_fold_orders=1, shap_cap=200)
+print(check.summary())
+```
+
+That is 66 fits of 100 trees instead of up to 231 of 500 (90 more if the reading is ROBUST, when the chance floor
+is built), and 200 explained rows per vector instead of 500. It checks the installation, not the result: 10 null
+draws give a cut of 2.373 instead of 2.079 and a coarser floor, and its numbers and verdict will differ from the
+record, so do not quote them. The demo's `--n-seeds 10` lowers only the number of null draws, with the same change
+of cut.
 
 ## Your own frames
 
@@ -54,7 +94,7 @@ print(result.summary())
 
 `source_df` is the data the model is trained on, `target_df` the data it will be deployed on. Both need a `shot`
 column; the source also needs a binary `label` column. Every other numeric column is used as a feature except
-`time`, `time_until_disrupt` and `time_domain`; the list used is in `result.feature_cols_used`, and any other
+`shot_id`, `time`, `time_until_disrupt` and `time_domain`; the list used is in `result.feature_cols_used`, and any other
 time-to-event or bookkeeping column in your frame should be dropped or excluded with `feature_cols=`.
 
 A frame straight out of DisruptionPy has no binary label, only `time_until_disrupt`. Which rows count as positive
@@ -79,7 +119,20 @@ count per column is in `result.provenance["imputed_with_source_median"]` and in 
 are allowed; they are left out of the AUC.
 
 `result.summary()` prints the QFC, the floor, z, the cut, the resolution and the verdict with its meaning;
-`result.to_dict()` gives the whole result as strict JSON.
+`result.to_dict()` gives the whole result as strict JSON. The fields you will use most:
+
+| field | what it holds |
+|---|---|
+| `verdict` | COLLAPSE, INDISTINGUISHABLE, ROBUST, UNCALIBRATED or UNDEFINED ([The verdicts](#the-verdicts)) |
+| `qfc`, `qfc_per_order` | the QFC (the mean over fold orders, which the verdict uses) and its value at each order |
+| `null_mean`, `null_sd`, `n_null_seeds` | the no-shift floor |
+| `z`, `exact_cut`, `resolution` | as in [What the words mean](#what-the-words-mean) |
+| `auc` | the deployed model's AUC on the target rows that have labels; `None` without them |
+| `feature_cols_used` | the features, in the order of the two importance vectors |
+| `source_importance`, `target_importance` | mean absolute attribution per feature (the source's at fold order 0) |
+| `verdict_effective`, `n_distinct_splits` | the reading at the cut for the number of distinct splits, if splits repeated |
+| `null_floor`, `chance_floor` | each floor in full: every draw, every skipped draw and its reason |
+| `provenance` | package version, estimator, attribution, seeds, rules and the imputation counts |
 
 ## What the words mean
 
@@ -90,8 +143,8 @@ are allowed; they are left out of the AUC.
 | **QFC** | Quantitative Feature Consistency: Spearman's rank correlation between the source and target importance vectors. 1 means the features keep the same order of importance; lower means the order changed |
 | **fold order** | the source vector is built out of fold (no shot is explained by a model that trained on it). Which equal-sized shots share a fold is arbitrary, so the reported QFC is the mean over 10 such orders |
 | **null floor** | the same measurement between two random halves of the source, 30 times. There is no shift between two halves, so this is what QFC looks like when nothing changed |
-| **z** | how many null-floor standard deviations the observed QFC lies from the floor's mean |
-| **cut** | 2.079 for 30 null draws, the exact two-sided 5% cut for one new value against 30 (wider than the normal-theory 1.96 because 30 draws is a small sample) |
+| **z** | how many null-floor standard deviations the observed QFC lies from the floor's mean: (QFC − floor mean) / floor sd, the sd being the sample sd of the draws (n − 1). Negative means less agreement than with no shift |
+| **cut** | 2.079 for 30 null draws: the two-sided 5% prediction cut for one new value against 30 draws, t(0.975, 29) × √(1 + 1/30). It is exact when the draws are independent and normal, and wider than 1.96 because the floor's mean and sd are estimated from the draws, not known |
 | **resolution** | cut × floor sd: the smallest change in QFC this floor can detect |
 | **chance floor** | the same measurement with the source labels shuffled, 15 times: what a model trained on noise gives |
 
@@ -101,7 +154,7 @@ are allowed; they are left out of the AUC.
 |---|---|---|
 | **COLLAPSE** | z ≤ −cut | the two environments agree on feature importance *less* than two halves of the source do. The explanation changed under the shift by more than no-shift sampling explains |
 | **INDISTINGUISHABLE** | −cut < z < cut | within what two halves of the source give each other. No change was detected; `resolution` says how large a change could have been |
-| **ROBUST** | z ≥ cut, and the floor is above the chance floor | the agreement is *higher* than two halves of the source give. If the floor lies below the chance floor, the reading is INDISTINGUISHABLE instead, because then two halves agree less than a model trained on noise does |
+| **ROBUST** | z ≥ cut, and the floor's mean is not below the chance floor's mean | the agreement is *higher* than two halves of the source give. If the floor's mean lies below the chance floor's mean, the reading is INDISTINGUISHABLE instead, because then two halves agree less than a model trained on noise does |
 | **UNCALIBRATED** | no floor was given (`compute_qfc` alone) | a raw QFC; it cannot be read on its own |
 | **UNDEFINED** | every null draw gave the same value | the floor has no spread, so no z exists |
 
@@ -130,14 +183,14 @@ shots. In that last case it gives the number of distinct splits and the reading 
    shows what that does.
 6. **Verdict** as in the table above, with the chance floor built only when the reading would be ROBUST.
 
-These are the paper's rules: its statistic, its exact cut, its census's primary scoring (the fold-order mean and
+These are the paper's rules: its statistic, its small-sample cut, its census's primary scoring (the fold-order mean and
 the chance-floor rule), and the null construction of its reference implementation (`qfc_test`).
 `tests/test_reference_identity.py` runs the package and a copy of that implementation
 (`tests/reference/qfc_metric.py`) on the same inputs and requires exact equality of the statistic, the null draws,
 z, the cut, the verdict, the distinct-split reading, the fold-order mean and the chance floor, for random forests
 with TreeSHAP; it also recomputes seven of the paper's archived conditions from their stored vectors and checks
 the chance-floor rule against the four census rows it changed. The reference has no counterpart for KernelSHAP,
-Saabas or permutation, so those are tested on their own (`tests/test_attributions.py`). Most of the paper's census
+Saabas or permutation, so those are tested on their own (`tests/test_attributions.py`). Many of the paper's census
 rows were scored against a differently built null, one forest per half with in-sample attributions on the first
 half; the worked example below shows what that changes. The census-level chance counts and the census's secondary
 construction-matched campaign describe many conditions at once and are not part of a single screening.
@@ -146,11 +199,36 @@ construction-matched campaign describe many conditions at once and are not part 
 
 ```python
 screen(source_df, target_df, attribution="saabas")          # or "treeshap", "kernelshap", "permutation"
-
-def my_contributions(model, X_explain, X_train, seed):      # any method: one row of per-feature values per row
-    return dprf_contributions(model, X_explain)              # e.g. what your predictor already computes
-screen(source_df, target_df, attribution=my_contributions)
 ```
+
+Any other method is a function of four arguments. This one needs only numpy and runs as it stands:
+
+```python
+import numpy as np
+from disruptionpy_qfc import screen
+
+def median_occlusion(model, X_explain, X_train, seed):
+    """Per row and feature: how much P(class 1) drops when that feature is set to its training median."""
+    base = model.predict_proba(X_explain)[:, 1]
+    medians = np.median(X_train, axis=0)
+    out = np.empty(X_explain.shape)
+    for j in range(X_explain.shape[1]):
+        X_j = X_explain.copy()
+        X_j[:, j] = medians[j]
+        out[:, j] = base - model.predict_proba(X_j)[:, 1]
+    return out
+
+result = screen(source_df, target_df, attribution=median_occlusion)
+```
+
+The package calls it with a model it has just fitted (a clone of `model`), the rows to explain, the rows that
+model was trained on, and a seed. The rows are numpy arrays whose columns are `result.feature_cols_used` in that
+order, with missing values already replaced by the source medians. It must return one value per explained row and
+feature, an array of shape `(len(X_explain), n_features)`; the package takes absolute values and averages them
+over the rows, so the sign does not matter. Use the seed for anything random, so that reruns and null draws are
+reproducible. The null floor calls the function in exactly the same way. To screen with contributions your own
+predictor computes, wrap that computation in a function of this form: it has to work on the estimator the package
+passes in, because the out-of-fold vector and the floor need refits.
 
 `"saabas"` is the tree-path decomposition of the `treeinterpreter` package, which is how the DPRF predictor
 computes its feature contributions (Rea et al., *Nucl. Fusion* 59, 096016, 2019); a test checks it against the
@@ -158,8 +236,9 @@ decomposition written out from the tree arrays. `"kernelshap"` uses a 30-centroi
 samples per row, as the paper does for non-tree models, with shap's `l1_reg` pinned to `"num_features(10)"`: with
 more than ten features, each row's attributions are fitted on the ten features a least-angle regression selects
 and the rest are set to zero. Because Spearman's rho counts every rank equally, those zeros shape the low end of
-the ranking. That is shap's current default, pinned because the default changed between shap versions; pass your
-own callable for another choice. `"permutation"` is the mean absolute change in predicted probability when one feature is shuffled; it
+the ranking. That has been shap's default since shap 0.47 (before, it was `"auto"`, and this package allows
+shap 0.45), so it is pinned to give the same rule on every allowed version; pass your own callable for another
+choice. `"permutation"` is the mean absolute change in predicted probability when one feature is shuffled; it
 uses no labels. The null floor always uses the same method as the measurement.
 
 ## Options
@@ -197,6 +276,28 @@ KernelSHAP is seeded too. Between machines, `GroupKFold`'s ordering of equal-siz
 which differs between platform builds, so values can differ slightly; averaging over 10 fold orders is what
 keeps that arbitrary choice out of the verdict.
 
+## Everything the package exports
+
+Each has a docstring (`help(disruptionpy_qfc.screen)`, and so on).
+
+| name | what it is |
+|---|---|
+| `screen(source_df, target_df, **options)` | null floor, measurement and verdict in one call; returns a `QFCResult` |
+| `compute_qfc(source_df, target_df, null_floor=..., chance_floor=..., **options)` | the measurement alone; `UNCALIBRATED` without a floor |
+| `compute_null_floor(source_df, n_seeds=30, **options)` | the no-shift floor, a `NullFloor` |
+| `compute_chance_floor(source_df, target_df, n_draws=15, **options)` | the permuted-label floor, a `ChanceFloor` |
+| `QFCResult`, `NullFloor`, `ChanceFloor` | the results; each has `summary()` and `to_dict()` |
+| `DegenerateDrawError` | raised for a draw the data in it cannot support (every training fold single-class, or a constant importance vector); a floor skips and counts such draws, and any other error, including one from your own attribution function, stops the run |
+| `default_model(random_state=42, max_depth=None)` | the default random forest |
+| `detect_feature_cols(df, label_col="label", shot_col="shot")` | the feature columns `screen` would use |
+| `build_rolling_features(df, signal_cols, window=10, ...)` | the worked example's eight causal rolling statistics per signal |
+| `qfc_statistic(src, tgt)` | Spearman's rho of two importance vectors |
+| `exact_cut(n)` | the 5% cut for `n` null draws |
+| `verdict_label(z, cut)` | COLLAPSE, INDISTINGUISHABLE or ROBUST from z and the cut |
+| `tie_order_groups(groups, k)` | the shot relabelling of fold order `k` |
+| `ATTRIBUTIONS`, `DEFAULT_EXCLUDE_COLS` | the built-in attribution methods by name; the columns never used as features |
+| `N_FOLD_ORDERS`, `N_NULL_SEEDS`, `N_CHANCE_DRAWS`, `__version__` | the default counts (10, 30, 15) and the version |
+
 ## Worked example: Alcator C-Mod, the 2000, 2001 and 2003 campaigns to 2005 and 2009
 
 ```bash
@@ -221,7 +322,7 @@ because the public release has them labelled stable throughout (no time point in
 **A collapse near the line.** The model still predicts well, and an attribution agreement of 0.961 looks
 excellent, yet two halves of the source campaigns alone agree with each other at 0.980. At the default seeds that
 is a collapse, but the floor depends on which 30 splits of the 40 source shots it draws. Drawing 30 other splits
-(seeds 0–29) gives a floor of 0.9820 ± 0.0115, z = −1.86, INDISTINGUISHABLE; pooling all 60 draws gives
+(seeds 0–29, which set each draw's forest seed as well as its split) gives a floor of 0.9820 ± 0.0115, z = −1.86, INDISTINGUISHABLE; pooling all 60 draws gives
 0.9813 ± 0.0094, z = −2.18 against that count's cut of 2.018, COLLAPSE by a margin of 0.164. Forty shots is a
 small pool, and one split (seed 8, 0.930) sits far below the rest. Read this as evidence that the explanation
 moved, near the edge of what this pool can resolve, not as a settled collapse.
@@ -229,8 +330,9 @@ moved, near the edge of what this pool can resolve, not as a settled collapse.
 **Which signals moved.** The record stores the source and target importance vectors of fold order 0, whose rank
 correlation is that order's QFC. Summed over each signal's eight statistics, density's share of the total
 attribution rises from 32.1% to 41.3% and plasma current's falls from 39.5% to 31.3%, so at the level of signals
-density overtakes plasma current. Among single features the largest is still plasma current's minimum, now
-followed by density's maximum and mean. The shares describe this one measurement: the package builds no no-shift
+density overtakes plasma current. Among single features plasma current still leads: its mean and its minimum are
+the two largest in the source, and its minimum is the largest in the target, now followed by density's maximum and
+mean. The shares describe this one measurement: the package builds no no-shift
 floor for a single signal's share, so how much of the movement no-shift sampling alone would produce is not
 measured here. Density and plasma current are the two quantities of the Greenwald density limit,
 n_G = I_p/(πa²) (Greenwald, *Plasma Phys. Control. Fusion* 44, R27, 2002); whether the movement reflects the
@@ -249,11 +351,13 @@ arms collapse (z = −3.08 and −2.83). The difference is 9% of the observed dr
 it is not significant (t = 1.86 on 9 degrees of freedom, p = 0.10), so matching the prior may remove a
 small part of the drop, but not most of it.
 
-**Why the paper reports a higher floor for this comparison.** Two of this paragraph's figures are the paper's
-and are quoted from its census, which is not yet published: the real value 0.9637 and its z = −4.86. The package did not compute them, and they are not in
-`docs/worked_example.json`. The paper's census scores this row at 0.9637, a mean over five model seeds at one fold
-order (the package's figures use one model seed, 42, and average ten fold orders), against a floor of
-0.9913 ± 0.0057, z = −4.86. The difference is the null's construction, not the data or the tree depth. For this
+<details>
+<summary><b>Why the paper reports a higher floor for this comparison</b></summary>
+
+The paper's census, which is not yet published, scores this row in its standard scoring at 0.9637, a mean over
+five model seeds at one fold order (the package's figures use one model seed, 42, and average ten fold orders),
+against a floor of 0.9913 ± 0.0057, z = −4.86. The package did not compute the 0.9637 or the −4.86, and neither is
+in `docs/worked_example.json`; it did compute the floor, as below. The difference is the null's construction, not the data or the tree depth. For this
 row the paper's floor fits one forest on the first half and compares its attributions on the very rows it was
 trained on with those on the second half; this package builds every null draw out of fold, as the paper's
 reference implementation does. The package's frames have the paper's rows, labels and shots, and the same 18
@@ -265,6 +369,8 @@ here: the paper's row used a depth of 20, and at depth 20 the package's floor is
 fitted on half the source do not grow past depth 20) and its QFC 0.9604, z = −2.91, COLLAPSE. The paper's own
 construction-matched rescoring of this row, a secondary column of its census, reads it as INDISTINGUISHABLE,
 in line with the split sensitivity above.
+
+</details>
 
 Every number the package computed in this section is in `docs/worked_example.json`, written by
 `scripts/regenerate_worked_example.py` with the machine, library versions and a hash of the package code it
@@ -281,7 +387,7 @@ DISRUPTIONPY_FRAME=frame.csv DPQ_TUD_COL=time_until_disrupt pytest -m integratio
 
 | group | needs | checks |
 |---|---|---|
-| default | nothing | the procedure against the paper's reference code, the attribution methods, the cap rule, the bootstrap, the validation and error messages, the README's numbers against `docs/worked_example.json` |
+| default | nothing | the procedure against the paper's reference code, the attribution methods, the cap rule, the bootstrap, the validation and error messages, the README's numbers against `docs/worked_example.json`, that the record was made by the code now in `src/`, and that the version and release date agree across `pyproject.toml`, `__version__`, `CITATION.cff`, `CHANGELOG.md` and the install line |
 | `slow` | the C-Mod release | the worked example reproduces its record |
 | `integration` | a frame produced by DisruptionPy | the package accepts and screens a real DisruptionPy frame |
 
@@ -310,11 +416,14 @@ strongest objections to the measurement and to this package, each with the test 
   take only a few values, so null draws often tie; below three features it is refused.
 - **Each verdict is a 5% test of one comparison.** Screening many comparisons at once calls for a correction
   across them, which the package does not make.
-- **It is not the only way to detect that explanations changed.** In the paper's benchmark of 54 shifts at a
-  matched 5% false-positive rate (in the paper's text, not yet published), the best detector depends on the model class: with random
+- **A COLLAPSE is not by itself a fault.** It says the model now relies on different features, not that the new
+  reliance is wrong: it may be the same physics reached through another signal. On C-Mod, density and plasma
+  current both enter the Greenwald limit, so the measurement alone cannot say which.
+- **It is not the only way to detect that explanations changed.** In the paper's benchmark (not yet published) of
+  54 shifts at a matched 5% false-positive rate, the best detector depends on the model class: with random
   forests QFC detects 35, Explanation Shift 32, and Kendall's tau and a sliced Wasserstein distance 36; with
   gradient boosting Explanation Shift detects 38 and 37 against QFC's 29 and 31. What QFC adds is a verdict
-  calibrated against the model's own no-shift floor, computable without target labels.
+  calibrated against the model's own no-shift floor; like Explanation Shift, it needs no target labels.
 
 ## Credits, citation, licence
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import disruptionpy_qfc as dq
@@ -199,8 +200,180 @@ def test_the_signal_shares_the_readme_states():
     assert "plasma current's falls from %.1f%% to %.1f%%" % (100 * p_s, 100 * p_t) in README
     top = sorted(zip(t, f), reverse=True)
     assert [c for _, c in top[:3]] == ["plasma_current_min", "density_max", "density_mean"]
-    assert "the largest is still plasma current's minimum, now followed by density's maximum and mean" in README
+    src_top = sorted(zip(s, f), reverse=True)
+    assert [c for _, c in src_top[:2]] == ["plasma_current_mean", "plasma_current_min"]
+    assert ("plasma current still leads: its mean and its minimum are the two largest in the source, and its "
+            "minimum is the largest in the target, now followed by density's maximum and mean") in README
+    assert ("its mean and its minimum are the two largest on the training campaigns, and its minimum is the "
+            "largest on the later ones") in README
+
+
+def test_the_readme_states_what_the_code_does():
+    """Statements about the code a reader would act on: the excluded columns, the cut's formula, the
+    chance-floor rule and the shap versions the KernelSHAP pin is about."""
+    import math
+
+    from scipy import stats
+
+    for c in sorted(set(dq.DEFAULT_EXCLUDE_COLS) - {"shot", "label"}):
+        assert "`%s`" % c in README, f"README does not name the excluded column {c}"
+    assert "t(0.975, 29) × √(1 + 1/30)" in README
+    assert dq.exact_cut(30) == pytest.approx(stats.t.ppf(0.975, 29) * math.sqrt(1 + 1 / 30), abs=1e-15)
+    assert "%.3f for 30 null draws" % dq.exact_cut(30) in README
+    assert "z ≥ cut, and the floor's mean is not below the chance floor's mean" in README
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'shap>=0.45' in pyproject and "this package allows shap 0.45" in README
 
 
 def test_the_runtime_the_readme_states_is_the_records():
     assert "took %d seconds" % round(REC["default"]["seconds"]) in README
+
+
+def test_the_readme_keeps_its_scope_and_independence_statements():
+    """The README's honesty statements are part of what it claims: the package is independent, the C-Mod collapse is
+    near the line, the paper is unpublished, and its theorem does not cover the random forests the package tests."""
+    for line in ("not affiliated with, reviewed or endorsed by MIT PSFC or the DisruptionPy maintainers",
+                 "It is close to the line.",
+                 "(A. Turayev, not yet published;",
+                 "Random forests, including the one in the C-Mod example, are outside the proof",
+                 "Only the training data need labels",
+                 "A COLLAPSE is not by itself a fault.",
+                 "scores this row in its standard scoring"):
+        assert line in README, f"README no longer states: {line}"
+
+
+RAW_README = (ROOT / "README.md").read_text(encoding="utf-8")
+FENCE = "```"
+
+
+def _python_block(marker: str) -> str:
+    """The README's one Python code block that contains ``marker``, as written."""
+    blocks = [b.split(FENCE)[0] for b in RAW_README.split(FENCE + "python")[1:]]
+    found = [b for b in blocks if marker in b]
+    assert len(found) == 1, f"expected one Python block containing {marker!r}, found {len(found)}"
+    return found[0]
+
+
+def test_every_public_name_is_in_the_readme():
+    """The API table names everything the package exports, so a reader never meets an undocumented name."""
+    for name in dq.__all__:
+        assert "`%s" % name in RAW_README, f"README does not document the exported name {name}"
+
+
+class _StubModel:
+    """A fixed logistic model: lets the README's attribution example run without fitting anything."""
+
+    def __init__(self, w):
+        self.w = np.asarray(w, float)
+
+    def predict_proba(self, X):
+        p = 1.0 / (1.0 + np.exp(-(np.asarray(X, float) @ self.w)))
+        return np.column_stack([1.0 - p, p])
+
+
+def test_the_custom_attribution_example_runs_as_written(monkeypatch):
+    """The README's custom method is self-contained: executing its block defines it, it hands it to screen(),
+    and the package accepts what it returns. Nothing is fitted: screen() is replaced and the model is a stub."""
+    import disruptionpy_qfc.core as core
+
+    assert "dprf_contributions" not in RAW_README
+    calls = []
+    monkeypatch.setattr(dq, "screen", lambda *a, **k: calls.append(k) or "result")
+    ns = {"source_df": None, "target_df": None}
+    exec(compile(_python_block("def median_occlusion"), "README", "exec"), ns)
+    fn = ns["median_occlusion"]
+    assert calls == [{"attribution": fn}]
+
+    X = np.random.default_rng(0).normal(size=(40, 5))
+    stub = _StubModel([3.0, 1.0, 0.0, 0.0, 0.5])
+    assert fn(stub, X, X, 0).shape == X.shape
+    imp = core._explain(stub, X, X, None, 0, fn)
+    assert imp.shape == (5,) and np.all(np.isfinite(imp))
+    assert int(np.argmax(imp)) == 0 and imp[2] == 0.0 and imp[3] == 0.0   # unused features get exactly zero
+    assert core._explain(stub, X, X, 10, 0, fn).shape == (5,)             # and under a row cap
+
+
+def test_the_light_check_is_accepted_and_its_numbers_hold(monkeypatch):
+    """The README's quick installation check passes only arguments screen() accepts, and the fit count and the
+    cut it states follow from its settings. Nothing is loaded or fitted: the frames and screen() are replaced."""
+    import inspect
+
+    import disruptionpy_qfc.demo as demo
+
+    accepted = set(inspect.signature(dq.screen).parameters) | set(inspect.signature(dq.compute_qfc).parameters)
+    seen = []
+
+    class _R:
+        def summary(self):
+            return ""
+
+    def fake_screen(source, target, **kw):
+        assert set(kw) <= accepted, set(kw) - accepted
+        seen.append(kw)
+        return _R()
+
+    monkeypatch.setattr(dq, "screen", fake_screen)
+    monkeypatch.setattr(demo, "build_demo_frames", lambda path: ("source", "target"))
+    exec(compile(_python_block("build_demo_frames("), "README", "exec"), {})
+    kw = seen[0]
+    assert kw["model"].n_estimators == 100 and kw["n_fold_orders"] == 1 and kw["shap_cap"] == 200
+    n = kw["n_seeds"]
+    assert "That is %d fits of 100 trees instead of up to 231 of 500" % (1 + 5 * kw["n_fold_orders"] + 6 * n) in README
+    assert "(%d more if the reading is ROBUST" % (6 * dq.N_CHANCE_DRAWS) in README
+    assert "%d null draws give a cut of %.3f instead of %.3f" % (n, dq.exact_cut(n), dq.exact_cut(30)) in README
+
+
+def _src_sha256() -> str:
+    """The hash ``scripts/regenerate_worked_example.py`` records: every ``src/disruptionpy_qfc/*.py`` in name order,
+    each as its name followed by its bytes, with CRLF read as LF so a Windows checkout hashes like Linux."""
+    import hashlib
+
+    h = hashlib.sha256()
+    for f in sorted((ROOT / "src" / "disruptionpy_qfc").glob("*.py")):
+        h.update(f.name.encode() + f.read_bytes().replace(bytes([13, 10]), bytes([10])))
+    return h.hexdigest()
+
+
+def test_the_record_was_made_by_the_code_in_src():
+    """The record's numbers come from the code in ``src/`` as it is now. Any change there, a docstring or the
+    version string included, fails this test until ``docs/worked_example.json`` is regenerated, so a changelog
+    entry that says "no code changed" is checked rather than asserted."""
+    assert REC["default"]["env"]["src_sha256"] == _src_sha256(), (
+        "src/ differs from the code that produced docs/worked_example.json; regenerate the record "
+        "(scripts/regenerate_worked_example.py) before releasing")
+
+
+def test_the_version_and_release_date_agree_everywhere():
+    """pyproject.toml, ``__version__``, CITATION.cff, the newest released CHANGELOG heading and the README's
+    install tag name one version, and CITATION.cff and the CHANGELOG one release date. Read with regular
+    expressions, so the test needs neither tomllib (Python 3.11+) nor a YAML parser."""
+    import re
+
+    v = dq.__version__
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    cff = (ROOT / "CITATION.cff").read_text(encoding="utf-8")
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert re.search(r'(?m)^version = "([^"]+)"$', pyproject).group(1) == v
+    assert re.search(r"(?m)^version: ([^ ]+)$", cff).group(1) == v
+    released = re.findall(r"(?m)^## ([0-9]+[.][0-9]+[.][0-9]+) [(]([0-9]{4}-[0-9]{2}-[0-9]{2})[)]$", changelog)
+    assert released and released[0][0] == v, "the newest released CHANGELOG heading is not this version"
+    assert re.search(r"(?m)^date-released: ([^ ]+)$", cff).group(1) == released[0][1]
+    assert "disruptionpy-qfc@v%s" % v in README, "the README's install line does not pin this version's tag"
+
+
+def test_the_citation_file_names_what_the_package_declares():
+    """CITATION.cff carries the keys CFF 1.2.0 requires, and its licence, repository and author agree with
+    pyproject.toml and LICENSE. (Its full schema was checked against the official CFF 1.2.0 JSON schema, with zero
+    errors, when this test was written; that check needs PyYAML and jsonschema, which the package does not use.)"""
+    import re
+
+    cff = (ROOT / "CITATION.cff").read_text(encoding="utf-8")
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    for key in ("cff-version: 1.2.0", "message: ", "title: ", "authors:", "type: software"):
+        assert re.search("(?m)^" + re.escape(key), cff), key
+    assert re.search("(?m)^license: MIT$", cff) and "License :: OSI Approved :: MIT License" in pyproject
+    assert (ROOT / "LICENSE").read_text(encoding="utf-8").startswith("MIT License")
+    repo = re.search('(?m)^Homepage = "([^"]+)"$', pyproject).group(1)
+    assert re.search('(?m)^repository-code: "%s"$' % re.escape(repo), cff)
+    assert 'authors = [{ name = "Abror Turayev" }]' in pyproject
+    assert "family-names: Turayev" in cff and 'orcid: "https://orcid.org/0009-0000-3182-2830"' in cff
